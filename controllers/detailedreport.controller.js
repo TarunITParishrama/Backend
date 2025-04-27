@@ -1,30 +1,18 @@
 const DetailedReport = require("../models/DetailedReports");
-const Student = require("../models/Students");
+//const Student = require("../models/Students");
 
-// Create DetailedReport (frontend sends pre-calculated data)
+// Create DetailedReport with stream validation
 exports.createDetailedReport = async (req, res) => {
   try {
+    // Validate required fields
     const requiredFields = [
-      "regNumber",
-      "studentName",
-      "campus",
-      "section",
-      "stream",
-      "testName",
-      "date",
-      "subjects",
-      "overallTotalMarks",
-      "accuracy",
-      "percentage",
-      "percentile"
+      "regNumber", "studentName", "campus", "section", "stream", 
+      "testName", "date", "subjects", "overallTotalMarks", "fullMarks",
+      "accuracy", "percentage", "percentile", "rank"
     ];
 
-    // Updated validation that properly handles zero values
-    const missingFields = requiredFields.filter(field => {
-      const value = req.body[field];
-      return value === undefined || value === null || value === "";
-    });
-
+    const missingFields = requiredFields.filter(field => !req.body[field] && req.body[field] !== 0);
+    
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: "error",
@@ -32,33 +20,33 @@ exports.createDetailedReport = async (req, res) => {
       });
     }
 
-    // Additional validation for subjects array
-    if (!Array.isArray(req.body.subjects)) {
+    // Validate stream
+    if (!["LongTerm", "PUC"].includes(req.body.stream)) {
       return res.status(400).json({
         status: "error",
-        message: "Subjects must be an array"
+        message: "Invalid stream value. Must be either 'LongTerm' or 'PUC'"
       });
     }
 
-    const invalidSubjects = req.body.subjects.filter(subject => {
-      return !subject.subjectName || 
-             typeof subject.totalMarks === 'undefined' || 
-             typeof subject.correctAnswers === 'undefined';
+    // Validate subjects
+    if (!Array.isArray(req.body.subjects) || req.body.subjects.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Subjects must be a non-empty array"
+      });
+    }
+
+    // Create the report
+    const report = new DetailedReport({
+      ...req.body,
+      date: new Date(req.body.date)
     });
 
-    if (invalidSubjects.length > 0) {
-      return res.status(400).json({
-        status: "error",
-        message: "Some subjects are missing required fields"
-      });
-    }
-
-    // Create report
-    const detailedReport = await DetailedReport.create(req.body);
+    await report.save();
 
     res.status(201).json({
       status: "success",
-      data: detailedReport
+      data: report
     });
   } catch (err) {
     console.error("Error creating detailed report:", err);
@@ -69,44 +57,28 @@ exports.createDetailedReport = async (req, res) => {
   }
 };
 
-// Get all DetailedReports with filters
+// Get reports with comprehensive filtering
 exports.getDetailedReports = async (req, res) => {
   try {
-    const {
-      regNumber,
-      testName,
-      stream,
-      date,
-      minPercentage,
-      maxPercentage,
-      minPercentile,
-      maxPercentile
-    } = req.query;
+    const { regNumber, testName, stream, campus, section, dateFrom, dateTo } = req.query;
 
     const filter = {};
 
-    // Apply basic filters
     if (regNumber) filter.regNumber = regNumber;
     if (testName) filter.testName = testName;
     if (stream) filter.stream = stream;
-    if (date) filter.date = new Date(date);
+    if (campus) filter.campus = campus;
+    if (section) filter.section = section;
 
-    // Percentage range filter
-    if (minPercentage || maxPercentage) {
-      filter.percentage = {};
-      if (minPercentage) filter.percentage.$gte = Number(minPercentage);
-      if (maxPercentage) filter.percentage.$lte = Number(maxPercentage);
+    // Date range filter
+    if (dateFrom || dateTo) {
+      filter.date = {};
+      if (dateFrom) filter.date.$gte = new Date(dateFrom);
+      if (dateTo) filter.date.$lte = new Date(dateTo);
     }
 
-    // Percentile range filter
-    if (minPercentile || maxPercentile) {
-      filter.percentile = {};
-      if (minPercentile) filter.percentile.$gte = Number(minPercentile);
-      if (maxPercentile) filter.percentile.$lte = Number(maxPercentile);
-    }
-
-    // Get reports
-    const reports = await DetailedReport.find(filter).sort({ date: -1 });
+    const reports = await DetailedReport.find(filter)
+      .sort({ date: -1, testName: 1 });
 
     res.status(200).json({
       status: "success",
@@ -121,10 +93,11 @@ exports.getDetailedReports = async (req, res) => {
   }
 };
 
-// Get DetailedReports by RegNumber
+// Get student's reports with test-wise grouping
 exports.getDetailedReportsByStudentId = async (req, res) => {
   try {
     const { regNumber } = req.params;
+    const { stream } = req.query;
 
     if (!regNumber) {
       return res.status(400).json({
@@ -133,25 +106,35 @@ exports.getDetailedReportsByStudentId = async (req, res) => {
       });
     }
 
-    // Verify student exists
-    const student = await Student.findOne({ regNumber });
-    if (!student) {
-      return res.status(404).json({
-        status: "error",
-        message: "Student not found"
-      });
-    }
+    // Build query
+    const query = { regNumber };
+    if (stream) query.stream = stream;
 
-    const reports = await DetailedReport.find({ regNumber })
-      .select(
-        "testName date subjects overallTotalMarks accuracy percentage percentile"
-      )
-      .sort({ date: -1 });
+    // Get reports grouped by testName
+    const reports = await DetailedReport.aggregate([
+      { $match: query },
+      { $sort: { date: -1 } },
+      {
+        $group: {
+          _id: "$testName",
+          reports: { $push: "$$ROOT" },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          testName: "$_id",
+          reports: 1,
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
 
     if (!reports || reports.length === 0) {
       return res.status(404).json({
         status: "error",
-        message: "No detailed reports found for this student"
+        message: "No reports found for this student"
       });
     }
 
@@ -160,7 +143,7 @@ exports.getDetailedReportsByStudentId = async (req, res) => {
       data: reports
     });
   } catch (err) {
-    console.error("Error fetching detailed reports:", err);
+    console.error("Error fetching student reports:", err);
     res.status(500).json({
       status: "error",
       message: "Internal server error"
@@ -168,15 +151,15 @@ exports.getDetailedReportsByStudentId = async (req, res) => {
   }
 };
 
-// Get single DetailedReport by ID
+// Get single report by ID
 exports.getDetailedReportById = async (req, res) => {
   try {
     const report = await DetailedReport.findById(req.params.id);
-
+    
     if (!report) {
       return res.status(404).json({
         status: "error",
-        message: "Detailed report not found"
+        message: "Report not found"
       });
     }
 
@@ -192,30 +175,28 @@ exports.getDetailedReportById = async (req, res) => {
   }
 };
 
-// Update DetailedReport
+// Update report
 exports.updateDetailedReport = async (req, res) => {
   try {
-    const updatedData = {
-      ...req.body,
-      date: req.body.date ? new Date(req.body.date) : undefined
-    };
+    const updates = { ...req.body };
+    if (req.body.date) updates.date = new Date(req.body.date);
 
-    const updatedReport = await DetailedReport.findByIdAndUpdate(
+    const report = await DetailedReport.findByIdAndUpdate(
       req.params.id,
-      updatedData,
-      { new: true }
+      updates,
+      { new: true, runValidators: true }
     );
 
-    if (!updatedReport) {
+    if (!report) {
       return res.status(404).json({
         status: "error",
-        message: "Detailed report not found"
+        message: "Report not found"
       });
     }
 
     res.status(200).json({
       status: "success",
-      data: updatedReport
+      data: report
     });
   } catch (err) {
     res.status(500).json({
@@ -225,21 +206,73 @@ exports.updateDetailedReport = async (req, res) => {
   }
 };
 
-// Delete DetailedReport
+// Delete report
 exports.deleteDetailedReport = async (req, res) => {
   try {
-    const deletedReport = await DetailedReport.findByIdAndDelete(req.params.id);
+    const report = await DetailedReport.findByIdAndDelete(req.params.id);
 
-    if (!deletedReport) {
+    if (!report) {
       return res.status(404).json({
         status: "error",
-        message: "Detailed report not found"
+        message: "Report not found"
       });
     }
 
     res.status(200).json({
       status: "success",
-      message: "Detailed report deleted successfully"
+      message: "Report deleted successfully"
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message
+    });
+  }
+};
+
+// Get test-wise performance for a student
+exports.getStudentTestPerformance = async (req, res) => {
+  try {
+    const { regNumber } = req.params;
+    const { stream } = req.query;
+
+    if (!regNumber) {
+      return res.status(400).json({
+        status: "error",
+        message: "Registration number is required"
+      });
+    }
+
+    const query = { regNumber };
+    if (stream) query.stream = stream;
+
+    const performance = await DetailedReport.aggregate([
+      { $match: query },
+      { $sort: { date: -1 } },
+      {
+        $group: {
+          _id: "$testName",
+          latestReport: { $first: "$$ROOT" },
+          attempts: { $sum: 1 },
+          averagePercentage: { $avg: "$percentage" },
+          highestPercentage: { $max: "$percentage" }
+        }
+      },
+      {
+        $project: {
+          testName: "$_id",
+          latestReport: 1,
+          attempts: 1,
+          averagePercentage: { $round: ["$averagePercentage", 2] },
+          highestPercentage: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      data: performance
     });
   } catch (err) {
     res.status(500).json({

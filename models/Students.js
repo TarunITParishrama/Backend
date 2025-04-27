@@ -27,13 +27,13 @@ const studentSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      match: /^\d{6}$/, // 6 digit number validation
-      index: true // Added index for faster queries
+      match: /^\d{6}$/, 
+      index: true 
     },
     studentName: {
       type: String,
       required: true,
-      index: true // Added index for faster name searches
+      index: true 
     },
     studentImageURL: {
       type: String
@@ -41,7 +41,7 @@ const studentSchema = new mongoose.Schema(
     allotmentType: {
       type: String,
       required: true,
-      enum: ['PUC', 'LongTerm']
+      enum: ['11th PUC', '12th PUC', 'LongTerm'] 
     },
     section: {
       type: String,
@@ -55,7 +55,7 @@ const studentSchema = new mongoose.Schema(
     fatherMobile: {
       type: String,
       required: true,
-      match: /^\d{10}$/ // 10 digit mobile number validation
+      match: /^\d{10}$/ 
     },
     address: {
       type: String,
@@ -68,7 +68,15 @@ const studentSchema = new mongoose.Schema(
     },
     medicalIssues: {
       type: String,
-      default: 'Nil'
+      default: 'No'
+    },
+    medicalDetails: {
+      type: String,
+      maxlength: 200
+    },
+    isTemporary: {
+      type: Boolean,
+      default: false
     }
   },
   {

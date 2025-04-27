@@ -22,7 +22,8 @@ const DetailedReportSchema = new mongoose.Schema(
     stream: {
       type: String,
       required: true,
-      enum: ["LongTerm", "PUC"]
+      enum: ["LongTerm", "PUC"],
+      index: true
     },
     testName: {
       type: String,
@@ -31,7 +32,8 @@ const DetailedReportSchema = new mongoose.Schema(
     },
     date: {
       type: Date,
-      required: true
+      required: true,
+      index: true
     },
     subjects: [
       {
@@ -58,10 +60,18 @@ const DetailedReportSchema = new mongoose.Schema(
         totalMarks: {
           type: Number,
           required: true
+        },
+        fullMarks: {
+          type: Number,
+          required: true
         }
       }
     ],
     overallTotalMarks: {
+      type: Number,
+      required: true
+    },
+    fullMarks: {
       type: Number,
       required: true
     },
@@ -76,15 +86,18 @@ const DetailedReportSchema = new mongoose.Schema(
     percentile: {
       type: Number,
       required: true
+    },
+    rank: {
+      type: Number,
+      required: true
     }
   },
   { timestamps: true }
 );
 
-// Indexes for faster queries
-DetailedReportSchema.index({ regNumber: 1, testName: 1 });
-DetailedReportSchema.index({ testName: 1, date: 1 });
-DetailedReportSchema.index({ stream: 1, testName: 1 });
 DetailedReportSchema.index({ regNumber: 1, stream: 1 });
+DetailedReportSchema.index({ testName: 1, stream: 1 });
+DetailedReportSchema.index({ regNumber: 1, testName: 1, stream: 1 });
+DetailedReportSchema.index({ date: 1, stream: 1 });
 
 module.exports = mongoose.model("DetailedReport", DetailedReportSchema);

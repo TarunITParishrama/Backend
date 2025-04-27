@@ -1,31 +1,14 @@
 const express = require("express");
-const detailedReportController = require("../controllers/detailedreport.controller");
 const router = express.Router();
+const detailedReportController = require("../controllers/detailedreport.controller");
 
-// DetailedReport CRUD Endpoints
-router.post(
-  "/api/createdetailedreports",
-  detailedReportController.createDetailedReport
-);
-router.get(
-  "/api/getdetailedreports",
-  detailedReportController.getDetailedReports
-);
-router.get(
-  "/api/getdetailedreportsbyid/:id",
-  detailedReportController.getDetailedReportById
-);
-router.get(
-  "/api/getdetailedreportsbystudentid/:regNumber",
-  detailedReportController.getDetailedReportsByStudentId
-);
-router.put(
-  "/api/updatedetailedreportsbyid/:id",
-  detailedReportController.updateDetailedReport
-);
-router.delete(
-  "/api/deletedetailedreportsbyid/:id",
-  detailedReportController.deleteDetailedReport
-);
+// DetailedReport endpoints
+router.post("/api/detailedreports", detailedReportController.createDetailedReport);
+router.get("/api/detailedreports", detailedReportController.getDetailedReports);
+router.get("/api/detailedreports/:id", detailedReportController.getDetailedReportById);
+router.get("/api/students/:regNumber/reports", detailedReportController.getDetailedReportsByStudentId);
+router.get("/api/students/:regNumber/performance", detailedReportController.getStudentTestPerformance);
+router.put("/api/detailedreports/:id", detailedReportController.updateDetailedReport);
+router.delete("/api/detailedreports/:id", detailedReportController.deleteDetailedReport);
 
 module.exports = router;
