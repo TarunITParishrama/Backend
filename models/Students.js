@@ -5,7 +5,7 @@ const studentSchema = new mongoose.Schema(
     admissionYear: {
       type: Number,
       required: true,
-      min: 2024,
+      min: 2022,
       max: 2028
     },
     campus: {

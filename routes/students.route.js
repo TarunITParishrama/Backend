@@ -5,6 +5,7 @@ const studentController = require('../controllers/students.controller')
 
 // Student CRUD routes
 router.post("/api/createstudent", studentController.createStudent)
+router.post("/api/bulkcreatestudents", studentController.bulkCreateStudents);
 router.get("/api/getstudents", studentController.getAllStudents)
 router.get("/api/getstudentbyreg/:regNumber", studentController.getStudentByRegNumber);
 router.put("/api/updatestudent/:id", studentController.updateStudent);

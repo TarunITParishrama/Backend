@@ -48,6 +48,54 @@ exports.createStudent = async function (req, res) {
   }
 };
 
+//bulk students details upload without Image
+exports.bulkCreateStudents = async (req, res) => {
+  try {
+    const studentsData = req.body.students;
+
+    if (!Array.isArray(studentsData) || studentsData.length === 0) {
+      return res.status(400).json({ status: "error", message: "No students data provided" });
+    }
+
+    let successCount = 0;
+    const failedStudents = [];
+
+    for (const studentData of studentsData) {
+      try {
+        // Check if regNumber already exists
+        const existingStudent = await Student.findOne({ regNumber: studentData.regNumber });
+        if (existingStudent) {
+          failedStudents.push({ regNumber: studentData.regNumber, reason: "Registration number already exists" });
+          continue;
+        }
+
+        // Create new student
+        await Student.create(studentData);
+        successCount++;
+
+      } catch (err) {
+        failedStudents.push({
+          regNumber: studentData.regNumber || "Unknown",
+          reason: err.message || "Validation error"
+        });
+      }
+    }
+
+    res.status(200).json({
+      status: "success",
+      successCount,
+      failedCount: failedStudents.length,
+      failedStudents
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message
+    });
+  }
+};
+
 exports.generateImageUploadURL = async (req, res) => {
   try {
     const { regNumber, fileExtension } = req.params;
@@ -66,7 +114,6 @@ exports.generateImageUploadURL = async (req, res) => {
     res.status(400).json({ status: "error", message: error.message });
   }
 };
-
 
 // Get All Students with fresh image URLs
 exports.getAllStudents = async function (req, res) {
