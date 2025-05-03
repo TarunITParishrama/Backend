@@ -30,6 +30,10 @@ const studentSchema = new mongoose.Schema(
       match: /^\d{6}$/, 
       index: true 
     },
+    dateOfBirth: {
+      type: Date,
+      required: true
+    },
     studentName: {
       type: String,
       required: true,
@@ -86,5 +90,6 @@ const studentSchema = new mongoose.Schema(
 
 studentSchema.index({ admissionYear: 1, campus: 1 });
 studentSchema.index({ studentName: 1, regNumber: 1, section: 1 });
+studentSchema.index({ regNumber:1, dateOfBirth: 1});
 
 module.exports = mongoose.model("Student", studentSchema);

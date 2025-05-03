@@ -6,6 +6,7 @@ const router = express.Router();
 // Public routes
 router.post('/api/user/signup', userController.newSignup);
 router.post('/api/user/login', userController.newlogin);
+router.post('/api/parent/login',authMiddleware.parentLogin);
 
 router.use(authMiddleware.protect); 
 

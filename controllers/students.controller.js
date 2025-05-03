@@ -3,7 +3,8 @@ const Campus = require('../models/Campus');
 const { 
   generateUploadURL, 
   generateViewURL,
-  fileExists
+  fileExists,
+  deleteFile
 } = require('../utils/s3.js');
 const path = require('path');
 
@@ -12,6 +13,21 @@ const getFileExtension = (filename) => {
   return path.extname(filename).toLowerCase();
 };
 
+// Helper function to parse date from DD-MM-YYYY format
+const parseDateOfBirth = (dobString) => {
+  if (!dobString) return null;
+  
+  // If already a Date object or ISO string
+  if (dobString instanceof Date || !isNaN(new Date(dobString).getTime())) {
+    return new Date(dobString);
+  }
+  
+  // Parse from DD-MM-YYYY format
+  const [day, month, year] = dobString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// Create Student
 exports.createStudent = async function (req, res) {
   try {
     // Verify campus exists
@@ -21,6 +37,17 @@ exports.createStudent = async function (req, res) {
         status: "error",
         message: "Invalid campus ID"
       });
+    }
+
+    // Parse dateOfBirth
+    if (req.body.dateOfBirth) {
+      req.body.dateOfBirth = parseDateOfBirth(req.body.dateOfBirth);
+      if (!req.body.dateOfBirth || isNaN(req.body.dateOfBirth.getTime())) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid date of birth format. Use DD-MM-YYYY"
+        });
+      }
     }
 
     // Check if student exists
@@ -34,7 +61,11 @@ exports.createStudent = async function (req, res) {
     }
 
     // Create student
-    const student = await Student.create({...req.body, studentImageURL : req.body.studentImageURL || null});
+    const student = await Student.create({
+      ...req.body,
+      studentImageURL: req.body.studentImageURL || null,
+      dateOfBirth: req.body.dateOfBirth
+    });
     
     res.status(201).json({
       status: "success",
@@ -47,7 +78,6 @@ exports.createStudent = async function (req, res) {
     });
   }
 };
-
 //bulk students details upload without Image
 exports.bulkCreateStudents = async (req, res) => {
   try {
@@ -67,6 +97,18 @@ exports.bulkCreateStudents = async (req, res) => {
         if (existingStudent) {
           failedStudents.push({ regNumber: studentData.regNumber, reason: "Registration number already exists" });
           continue;
+        }
+
+        // Parse dateOfBirth
+        if (studentData.dateOfBirth) {
+          studentData.dateOfBirth = parseDateOfBirth(studentData.dateOfBirth);
+          if (!studentData.dateOfBirth || isNaN(studentData.dateOfBirth.getTime())) {
+            failedStudents.push({ 
+              regNumber: studentData.regNumber, 
+              reason: "Invalid date of birth format. Use DD-MM-YYYY"
+            });
+            continue;
+          }
         }
 
         // Create new student
@@ -127,13 +169,22 @@ exports.getAllStudents = async function (req, res) {
         const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
         for (const ext of extensions) {
           try {
-            const url = await generateViewURL(student.regNumber, ext);
-            studentObj.studentImageURL = url;
-            break;
+            const exists = await fileExists(student.regNumber, ext);
+            if (exists) {
+              const url = await generateViewURL(student.regNumber, ext);
+              studentObj.studentImageURL = url;
+              break;
+            }
           } catch (err) {
             continue;
           }
         }
+      }
+
+      // Format dateOfBirth for display
+      if (studentObj.dateOfBirth) {
+        const dob = new Date(studentObj.dateOfBirth);
+        studentObj.formattedDOB = `${dob.getDate().toString().padStart(2, '0')}-${(dob.getMonth() + 1).toString().padStart(2, '0')}-${dob.getFullYear()}`;
       }
 
       return studentObj;
@@ -171,6 +222,12 @@ exports.getStudentByRegNumber = async (req, res) => {
       }
     }
 
+    // Format dateOfBirth for display
+    if (studentObj.dateOfBirth) {
+      const dob = new Date(studentObj.dateOfBirth);
+      studentObj.formattedDOB = `${dob.getDate().toString().padStart(2, '0')}-${(dob.getMonth() + 1).toString().padStart(2, '0')}-${dob.getFullYear()}`;
+    }
+
     res.status(200).json({ status: "success", data: studentObj });
   } catch (error) {
     console.error("Error fetching student:", error);
@@ -181,6 +238,17 @@ exports.getStudentByRegNumber = async (req, res) => {
 // Update a student
 exports.updateStudent = async (req, res) => {
   try {
+    // Parse dateOfBirth if provided
+    if (req.body.dateOfBirth) {
+      req.body.dateOfBirth = parseDateOfBirth(req.body.dateOfBirth);
+      if (!req.body.dateOfBirth || isNaN(req.body.dateOfBirth.getTime())) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid date of birth format. Use DD-MM-YYYY"
+        });
+      }
+    }
+
     const student = await Student.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -191,7 +259,14 @@ exports.updateStudent = async (req, res) => {
       return res.status(404).json({ status: "error", message: "Student not found" });
     }
 
-    res.status(200).json({ status: "success", data: student });
+    // Format dateOfBirth for response
+    const studentObj = student.toObject();
+    if (studentObj.dateOfBirth) {
+      const dob = new Date(studentObj.dateOfBirth);
+      studentObj.formattedDOB = `${dob.getDate().toString().padStart(2, '0')}-${(dob.getMonth() + 1).toString().padStart(2, '0')}-${dob.getFullYear()}`;
+    }
+
+    res.status(200).json({ status: "success", data: studentObj });
   } catch (error) {
     res.status(400).json({ status: "error", message: error.message });
   }
