@@ -42,6 +42,9 @@ app.use('/',UserModelRoute)
 const StudentRoute = require('./routes/students.route');
 app.use('/', StudentRoute);
 
+const AttendanceRoute = require('./routes/attendance.route');
+app.use('/',AttendanceRoute);
+
 const CampusRoute = require('./routes/campus.route');
 app.use('/', CampusRoute);
 
