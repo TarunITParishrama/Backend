@@ -13,19 +13,6 @@ const getFileExtension = (filename) => {
   return path.extname(filename).toLowerCase();
 };
 
-// Helper function to parse date from DD-MM-YYYY format
-const parseDateOfBirth = (dobString) => {
-  if (!dobString) return null;
-  
-  // If already a Date object or ISO string
-  if (dobString instanceof Date || !isNaN(new Date(dobString).getTime())) {
-    return new Date(dobString);
-  }
-  
-  // Parse from DD-MM-YYYY format
-  const [day, month, year] = dobString.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
 
 // Create Student
 exports.createStudent = async function (req, res) {
@@ -89,54 +76,91 @@ exports.bulkCreateStudents = async (req, res) => {
 
     let successCount = 0;
     const failedStudents = [];
+    const createdStudents = []; // For debugging
 
     for (const studentData of studentsData) {
       try {
         // Check if regNumber already exists
         const existingStudent = await Student.findOne({ regNumber: studentData.regNumber });
         if (existingStudent) {
-          failedStudents.push({ regNumber: studentData.regNumber, reason: "Registration number already exists" });
+          failedStudents.push({ 
+            regNumber: studentData.regNumber, 
+            reason: "Registration number already exists" 
+          });
           continue;
         }
 
-        // Parse dateOfBirth
+        // Parse dateOfBirth if exists
+        let parsedDate = null;
         if (studentData.dateOfBirth) {
-          studentData.dateOfBirth = parseDateOfBirth(studentData.dateOfBirth);
-          if (!studentData.dateOfBirth || isNaN(studentData.dateOfBirth.getTime())) {
-            failedStudents.push({ 
-              regNumber: studentData.regNumber, 
-              reason: "Invalid date of birth format. Use DD-MM-YYYY"
+          try {
+            parsedDate = parseDateOfBirth(studentData.dateOfBirth);
+            if (!parsedDate || isNaN(parsedDate.getTime())) {
+              throw new Error("Invalid date format");
+            }
+            studentData.dateOfBirth = parsedDate;
+          } catch (dateError) {
+            failedStudents.push({
+              regNumber: studentData.regNumber,
+              reason: `Invalid date format: ${studentData.dateOfBirth}. Use DD-MM-YYYY`
             });
             continue;
           }
         }
 
         // Create new student
-        await Student.create(studentData);
+        const newStudent = await Student.create(studentData);
+        createdStudents.push(newStudent); // For debugging
         successCount++;
 
       } catch (err) {
+        console.error(`Error creating student ${studentData.regNumber}:`, err);
         failedStudents.push({
           regNumber: studentData.regNumber || "Unknown",
-          reason: err.message || "Validation error"
+          reason: err.message || "Validation error",
+          details: err.errors ? Object.values(err.errors).map(e => e.message) : []
         });
       }
     }
+
+    // Log results for debugging
+    console.log(`Bulk create results - Success: ${successCount}, Failed: ${failedStudents.length}`);
+    console.log("Created students:", createdStudents.map(s => s.regNumber));
+    console.log("Failed students:", failedStudents);
 
     res.status(200).json({
       status: "success",
       successCount,
       failedCount: failedStudents.length,
-      failedStudents
+      failedStudents,
+      createdStudents: createdStudents.map(s => s.regNumber) // For debugging
     });
 
   } catch (err) {
+    console.error("Bulk create error:", err);
     res.status(500).json({
       status: "error",
-      message: err.message
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 };
+
+// Helper function to parse date
+function parseDateOfBirth(dateString) {
+  if (!dateString) return null;
+  
+  // Handle various date formats
+  if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) { // DD-MM-YYYY
+    const [day, month, year] = dateString.split('-');
+    return new Date(`${year}-${month}-${day}`);
+  } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) { // YYYY-MM-DD
+    return new Date(dateString);
+  } else if (dateString instanceof Date) {
+    return dateString;
+  }
+  throw new Error("Unsupported date format");
+}
 
 exports.generateImageUploadURL = async (req, res) => {
   try {
