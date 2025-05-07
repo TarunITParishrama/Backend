@@ -8,7 +8,7 @@ const ReportSchema = new mongoose.Schema({
     },
     questionType: { 
         type: String, 
-        enum: ['MCQ', 'FillInTheBlanks', 'Theory'], 
+        enum: ['MCQ', 'Theory'], 
         required: true 
     },
     testName: { 

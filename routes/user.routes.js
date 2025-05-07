@@ -1,14 +1,15 @@
 const express = require("express");
 const userController = require("../controllers/user.controller");
-const authMiddleware = require("../middleware/auth.middleware"); // You'll need to create this
+const authMiddleware = require("../middleware/auth.middleware");
 const router = express.Router();
 
-// Public routes
+// Public routes (no protection)
 router.post('/api/user/signup', userController.newSignup);
 router.post('/api/user/login', userController.newlogin);
-router.post('/api/parent/login',authMiddleware.parentLogin);
+router.post('/api/parent/login', authMiddleware.parentLogin);
 
-router.use(authMiddleware.protect); 
+// Protected routes (require auth)
+router.use(authMiddleware.protect); // Now this only applies to routes below
 
 // Admin-only routes
 router.get('/api/users', authMiddleware.restrictTo('admin', 'super_admin'), userController.getAllUsers);

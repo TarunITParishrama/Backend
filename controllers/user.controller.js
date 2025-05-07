@@ -19,7 +19,7 @@ exports.newSignup = async function (req, res) {
         const token = jwt.sign(
             tokenPayload,
             process.env.JWT_SECRET, // Store this in your environment variables
-            { expiresIn: process.env.JWT_EXPIRES_IN || '30d' } // Token expiration
+            { expiresIn: process.env.JWT_EXPIRES_IN || '180d' } // Token expiration
         );
 
         // Remove password from output (even if it's hashed)
