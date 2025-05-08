@@ -1,10 +1,24 @@
 const mongoose = require('mongoose');
 
+const subjectSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    enum: ['Physics', 'Chemistry', 'Biology', 'Mathematics']
+  },
+  maxMarks: {
+    type: Number,
+    required: true,
+    min: 0
+  }
+});
+
 const theoryTestSchema = new mongoose.Schema({
   stream: {
     type: String,
     required: true,
-    enum: ['LongTerm', 'PUC']
+    enum: ['LongTerm', 'PUC'],
+    default: 'PUC'
   },
   testName: {
     type: String,
@@ -14,6 +28,16 @@ const theoryTestSchema = new mongoose.Schema({
   date: {
     type: Date,
     required: true
+  },
+  subjectDetails: {
+    type: [subjectSchema],
+    required: true,
+    validate: {
+      validator: function(v) {
+        return v.length === 4; // Ensure exactly 4 subjects
+      },
+      message: 'Exactly 4 subjects are required'
+    }
   },
   studentResults: [{
     regNumber: {
@@ -27,10 +51,9 @@ const theoryTestSchema = new mongoose.Schema({
       }
     },
     subjectMarks: {
-      physics: { type: Number, default: 0 },
-      chemistry: { type: Number, default: 0 },
-      biology: { type: Number, default: 0 },
-      mathematics: { type: Number, default: 0 }
+      type: Map,
+      of: Number,
+      required: true
     },
     totalMarks: {
       type: Number,

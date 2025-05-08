@@ -5,20 +5,29 @@ const asyncHandler = require('express-async-handler');
 // @route   POST /api/createtheory
 // @access  Private
 const createTheoryTest = asyncHandler(async (req, res) => {
-  const { stream, testName, date, studentResults } = req.body;
+  const { stream, testName, date, subjectDetails, studentResults } = req.body;
 
   // Validate input
-  if (!stream || !testName || !date || !studentResults || !Array.isArray(studentResults)) {
+  if (!stream || !testName || !date || !subjectDetails || !studentResults || !Array.isArray(studentResults)) {
     res.status(400);
     throw new Error('Missing required fields');
   }
 
-  // Calculate percentage for each student
+  // Validate subject details
+  if (!Array.isArray(subjectDetails) || subjectDetails.length !== 4) {
+    res.status(400);
+    throw new Error('Exactly 4 subjects are required');
+  }
+
+  // Process student results with calculated values
   const processedResults = studentResults.map(result => {
-    const totalPossible = 145; // Assuming total marks is always 145 as per your example
-    const percentage = (result.totalMarks / totalPossible) * 100;
+    const totalMarks = Object.values(result.subjectMarks).reduce((sum, mark) => sum + (mark || 0), 0);
+    const totalPossible = subjectDetails.reduce((sum, sub) => sum + sub.maxMarks, 0);
+    const percentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
+    
     return {
       ...result,
+      totalMarks,
       percentage: parseFloat(percentage.toFixed(2))
     };
   });
@@ -27,6 +36,7 @@ const createTheoryTest = asyncHandler(async (req, res) => {
     stream,
     testName,
     date: new Date(date),
+    subjectDetails,
     studentResults: processedResults
   });
 
@@ -48,17 +58,48 @@ const getTheoryTests = asyncHandler(async (req, res) => {
   if (stream) query.stream = stream;
   if (testName) query.testName = { $regex: testName, $options: 'i' };
 
-  const tests = await TheoryTest.find(query)
-    .sort({ date: -1 })
-    .select('testName date stream studentResults'); 
+  try {
+    const tests = await TheoryTest.find(query)
+      .sort({ date: -1 })
+      .select('testName date stream subjectDetails studentResults')
+      .lean(); // Convert to plain JavaScript objects
 
-  res.status(200).json({
-    status: 'success',
-    results: tests.length,
-    data: {
-      tests
-    }
-  });
+    // Process the data to ensure consistent structure
+    const processedTests = tests.map(test => ({
+      _id: test._id,
+      testName: test.testName,
+      date: test.date,
+      stream: test.stream,
+      subjectDetails: test.subjectDetails || [
+        { name: "Physics", maxMarks: 35 },
+        { name: "Chemistry", maxMarks: 35 },
+        { name: "Biology", maxMarks: 35 },
+        { name: "Mathematics", maxMarks: 40 }
+      ],
+      studentResults: (test.studentResults || []).map(result => ({
+        regNumber: result.regNumber,
+        subjectMarks: result.subjectMarks instanceof Map ? 
+          Object.fromEntries(result.subjectMarks) : 
+          result.subjectMarks,
+        totalMarks: result.totalMarks,
+        percentage: result.percentage
+      }))
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      results: processedTests.length,
+      data: {
+        tests: processedTests
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching theory tests:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch theory tests'
+    });
+  }
 });
 
 // @desc    Get theory test by ID
