@@ -4,7 +4,7 @@ const detailedReportController = require("../controllers/detailedreport.controll
 
 // DetailedReport endpoints
 router.post("/api/detailedreports", detailedReportController.createDetailedReport);
-router.post("/api/detailedreports/bulk", detailedReportController.bulkUploadDetailedReports); // Add this line
+router.post("/api/detailedreports/bulk", detailedReportController.bulkUploadDetailedReports); 
 router.get("/api/detailedreports", detailedReportController.getDetailedReports);
 router.get("/api/detailedreports/:id", detailedReportController.getDetailedReportById);
 router.get("/api/students/:regNumber/reports", detailedReportController.getDetailedReportsByStudentId);
