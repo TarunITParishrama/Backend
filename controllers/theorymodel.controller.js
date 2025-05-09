@@ -1,5 +1,5 @@
-const TheoryTest = require('../models/theoryModel');
 const asyncHandler = require('express-async-handler');
+const TheoryTest = require('../models/theoryModel');
 
 // @desc    Create a new theory test
 // @route   POST /api/createtheory
@@ -21,12 +21,25 @@ const createTheoryTest = asyncHandler(async (req, res) => {
 
   // Process student results with calculated values
   const processedResults = studentResults.map(result => {
-    const totalMarks = Object.values(result.subjectMarks).reduce((sum, mark) => sum + (mark || 0), 0);
-    const totalPossible = subjectDetails.reduce((sum, sub) => sum + sub.maxMarks, 0);
+    const subjectMarks = {};
+    let totalMarks = 0;
+    let totalPossible = 0;
+    
+    subjectDetails.forEach(subject => {
+      const mark = result.subjectMarks[subject.name] || 0;
+      subjectMarks[subject.name] = {
+        obtained: mark,
+        total: subject.maxMarks
+      };
+      totalMarks += mark;
+      totalPossible += subject.maxMarks;
+    });
+    
     const percentage = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
     
     return {
       ...result,
+      subjectMarks,
       totalMarks,
       percentage: parseFloat(percentage.toFixed(2))
     };
@@ -62,9 +75,8 @@ const getTheoryTests = asyncHandler(async (req, res) => {
     const tests = await TheoryTest.find(query)
       .sort({ date: -1 })
       .select('testName date stream subjectDetails studentResults')
-      .lean(); // Convert to plain JavaScript objects
+      .lean();
 
-    // Process the data to ensure consistent structure
     const processedTests = tests.map(test => ({
       _id: test._id,
       testName: test.testName,
@@ -78,9 +90,7 @@ const getTheoryTests = asyncHandler(async (req, res) => {
       ],
       studentResults: (test.studentResults || []).map(result => ({
         regNumber: result.regNumber,
-        subjectMarks: result.subjectMarks instanceof Map ? 
-          Object.fromEntries(result.subjectMarks) : 
-          result.subjectMarks,
+        subjectMarks: result.subjectMarks,
         totalMarks: result.totalMarks,
         percentage: result.percentage
       }))
@@ -141,6 +151,7 @@ const getTheoryTestByRegNumber = asyncHandler(async (req, res) => {
         stream: 1,
         testName: 1,
         date: 1,
+        subjectDetails: 1,
         subjectMarks: '$studentResults.subjectMarks',
         totalMarks: '$studentResults.totalMarks',
         percentage: '$studentResults.percentage'
@@ -149,11 +160,38 @@ const getTheoryTestByRegNumber = asyncHandler(async (req, res) => {
     { $sort: { date: -1 } }
   ]);
 
+  // Transform the data to include subject details
+  const processedTests = tests.map(test => {
+    const subjects = [];
+    let totalPossible = 0;
+    
+    test.subjectDetails.forEach(subject => {
+      const markData = test.subjectMarks[subject.name] || { obtained: 0, total: subject.maxMarks };
+      subjects.push({
+        subjectName: subject.name,
+        obtainedMarks: markData.obtained,
+        totalMarks: markData.total || subject.maxMarks
+      });
+      totalPossible += subject.maxMarks;
+    });
+
+    return {
+      _id: test._id,
+      testName: test.testName,
+      date: test.date,
+      stream: test.stream,
+      subjects,
+      totalMarks: test.totalMarks,
+      totalPossible,
+      percentage: test.percentage
+    };
+  });
+
   res.status(200).json({
     status: 'success',
-    results: tests.length,
+    results: processedTests.length,
     data: {
-      tests
+      tests: processedTests
     }
   });
 });

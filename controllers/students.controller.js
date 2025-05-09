@@ -227,7 +227,7 @@ exports.getAllStudents = async function (req, res) {
 // Get single Student by RegNumber with fresh image URL
 exports.getStudentByRegNumber = async (req, res) => {
   try {
-    const student = await Student.findOne({ regNumber: req.params.regNumber });
+    const student = await Student.findOne({ regNumber: req.params.regNumber }).populate('campus');
     if (!student) {
       return res.status(404).json({ status: "error", message: "Student not found" });
     }
