@@ -39,6 +39,13 @@ app.use('/',StudentReportRoute)
 const TheoryTestsRoute = require('./routes/theorytests.route');
 app.use('/', TheoryTestsRoute)
 
+const GatePassRoutes = require('./routes/gatepass.route');
+app.use('/', GatePassRoutes)
+
+const NoticeRoutes = require('./routes/notice.route');
+require('./controllers/notice.controller')
+app.use('/', NoticeRoutes)
+
 const UserModelRoute = require('./routes/user.routes');
 app.use('/',UserModelRoute)
 

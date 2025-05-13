@@ -22,7 +22,11 @@
     "express-async-handler": "^1.2.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.2",
+    "node-cron": "^4.0.4",
+    "nodemailer": "^7.0.3",
     "nodemon": "^3.1.9",
-    "sharp": "^0.34.1"
+    "path": "^0.12.7",
+    "sharp": "^0.34.1",
+    "twilio": "^5.6.0"
   }
 }

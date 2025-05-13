@@ -39,6 +39,35 @@ exports.generateViewURL = async (regNumber, extension = '.jpg') => {
   return viewURL;
 };
 
+// Generate upload URL for gate pass images
+exports.generateGatePassUploadURL = async (filename, extension = '.jpg') => {
+  const key = `gatepasses/${filename}${extension}`;
+
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Expires: 60 * 5, // 5 minutes validity
+    ContentType: getMimeType(extension),
+  };
+
+  const uploadURL = await s3.getSignedUrlPromise('putObject', params);
+  return uploadURL;
+};
+
+// Generate view URL for gate pass images
+exports.generateGatePassViewURL = async (filename, extension = '.jpg') => {
+  const key = `gatepasses/${filename}${extension}`;
+
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Expires: 60 * 60, // 1 hour validity for viewing
+  };
+
+  const viewURL = await s3.getSignedUrlPromise('getObject', params);
+  return viewURL;
+};
+
 // Helper to check if file exists
 exports.fileExists = async (regNumber, extension = '.jpg') => {
   const key = `students/${regNumber}${extension}`;

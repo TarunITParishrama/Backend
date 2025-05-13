@@ -13,6 +13,7 @@ router.put("/api/updatestudent/:id", studentController.updateStudent);
 router.get("/api/searchstudents", studentController.searchStudents);
 router.get("/api/checkregnumber/:regNumber", studentController.checkRegNumber);
 router.delete("/api/deletestudent/:id", studentController.deleteStudent);
+router.delete("/api/delete-student-image/:regNumber", studentController.deleteStudentImage);
 router.get("/api/getstudentsbycampus/:campusId", studentController.getStudentsByCampus);
 
 // Image upload route

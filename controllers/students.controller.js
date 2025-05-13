@@ -13,7 +13,6 @@ const getFileExtension = (filename) => {
   return path.extname(filename).toLowerCase();
 };
 
-
 // Create Student
 exports.createStudent = async function (req, res) {
   try {
@@ -324,6 +323,59 @@ exports.deleteStudent = async (req, res) => {
     res.status(204).json({ status: "success", data: null });
   } catch (error) {
     res.status(400).json({ status: "error", message: error.message });
+  }
+};
+
+exports.deleteStudentImage = async (req, res) => {
+  try {
+    const { regNumber } = req.params;
+    
+    if (!regNumber) {
+      return res.status(400).json({ 
+        status: "error", 
+        message: "Registration number required" 
+      });
+    }
+
+    const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    let deleted = false;
+    
+    for (const ext of extensions) {
+      try {
+        const exists = await fileExists(regNumber, ext);
+        if (exists) {
+          await deleteFile(regNumber, ext);
+          deleted = true;
+          break;
+        }
+      } catch (err) {
+        continue;
+      }
+    }
+
+    if (!deleted) {
+      return res.status(404).json({ 
+        status: "error", 
+        message: "No image found for this student" 
+      });
+    }
+
+    // Update student record in database
+    await Student.findOneAndUpdate(
+      { regNumber },
+      { $unset: { studentImageURL: 1 } },
+      { new: true }
+    );
+
+    res.status(200).json({ 
+      status: "success", 
+      message: "Image deleted successfully" 
+    });
+  } catch (error) {
+    res.status(400).json({ 
+      status: "error", 
+      message: error.message 
+    });
   }
 };
 
