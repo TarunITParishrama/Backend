@@ -28,11 +28,6 @@ const noticeSchema = new mongoose.Schema({
     required: [true, 'Drop time is required'],
     match: [/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Please enter a valid time in HH:MM format']
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   createdAt: {
     type: Date,
     default: Date.now
