@@ -40,7 +40,12 @@ exports.generateViewURL = async (regNumber, extension = '.jpg') => {
 };
 
 // Generate upload URL for gate pass images
-exports.generateGatePassUploadURL = async (filename, extension = '.jpg') => {
+exports.generateGatePassUploadURL = async (regNumber, passType, extension = '.jpg') => {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const filename = `${regNumber}_${passType}_${hh}${mm}${ss}`;
   const key = `gatepasses/${filename}${extension}`;
 
   const params = {
@@ -51,13 +56,11 @@ exports.generateGatePassUploadURL = async (filename, extension = '.jpg') => {
   };
 
   const uploadURL = await s3.getSignedUrlPromise('putObject', params);
-  return uploadURL;
+  return {uploadURL, key};
 };
 
 // Generate view URL for gate pass images
-exports.generateGatePassViewURL = async (filename, extension = '.jpg') => {
-  const key = `gatepasses/${filename}${extension}`;
-
+exports.generateGatePassViewURL = async (key) => {
   const params = {
     Bucket: BUCKET_NAME,
     Key: key,

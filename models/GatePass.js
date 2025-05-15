@@ -47,7 +47,7 @@ const gatePassSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    imageURL: {
+    imageKey: {  
       type: String,
       required: true
     },
@@ -55,10 +55,21 @@ const gatePassSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    passType: {  
+      type: String,
+      enum: ['check-out', 'check-in'],
+      required: true
+    },
+    relatedPass: {  
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'GatePass'
+    },
+    checkInTime: {  
+      type: String
+    },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
+      enum: ['pending', 'approved', 'rejected', 'completed'], 
     }
   },
   {
@@ -70,5 +81,7 @@ const gatePassSchema = new mongoose.Schema(
 gatePassSchema.index({ studentRegNumber: 1 });
 gatePassSchema.index({ date: 1 });
 gatePassSchema.index({ parentMobile: 1 });
+gatePassSchema.index({ passType: 1 });
+gatePassSchema.index({ status: 1 });
 
-module.exports = mongoose.model("GatePass", gatePassSchema);
+module.exports = mongoose.model('GatePass', gatePassSchema);

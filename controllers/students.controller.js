@@ -64,6 +64,7 @@ exports.createStudent = async function (req, res) {
     });
   }
 };
+
 //bulk students details upload without Image
 exports.bulkCreateStudents = async (req, res) => {
   try {
