@@ -308,3 +308,58 @@ exports.deleteReportBankById = async function (req, res) {
         res.status(400).json({ status: "error", message: err.message });
     }
 };
+
+// Add this to your report.controller.js
+exports.deleteReportBankByTest = async (req, res) => {
+    try {
+        const { testName, stream, dateFrom, dateTo } = req.query;
+
+        // Validate required parameters
+        if (!testName || !stream || !dateFrom || !dateTo) {
+            return res.status(400).json({
+                status: "error",
+                message: "testName, stream, dateFrom and dateTo are required"
+            });
+        }
+
+        // Find matching reports
+        const reports = await Report.find({
+            testName,
+            stream,
+            date: {
+                $gte: new Date(dateFrom),
+                $lte: new Date(dateTo)
+            }
+        });
+
+        if (reports.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No reports found matching criteria"
+            });
+        }
+
+        // Delete all associated ReportBank entries
+        const deleteResult = await ReportBank.deleteMany({
+            reportRef: { $in: reports.map(r => r._id) }
+        });
+
+        // Delete the reports themselves
+        await Report.deleteMany({
+            _id: { $in: reports.map(r => r._id) }
+        });
+
+        res.status(200).json({
+            status: "success",
+            deletedCount: deleteResult.deletedCount,
+            message: `Deleted ${deleteResult.deletedCount} report bank entries and ${reports.length} reports`
+        });
+
+    } catch (err) {
+        console.error("Error in deleteReportBankByTest:", err);
+        res.status(500).json({
+            status: "error",
+            message: err.message || "Failed to delete reports"
+        });
+    }
+};

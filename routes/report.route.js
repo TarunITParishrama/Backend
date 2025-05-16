@@ -15,5 +15,7 @@ router.delete("/api/deletereport/:reportId", reportController.deleteReportById);
 // ReportBank routes
 router.put("/api/updatereportbank/:entryId", reportController.updateReportBankById);
 router.delete("/api/deletereportbank/:entryId", reportController.deleteReportBankById);
+router.delete("/api/deletereportbankbytest", reportController.deleteReportBankByTest);
+
 
 module.exports = router;

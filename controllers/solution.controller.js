@@ -271,17 +271,49 @@ exports.updateSolutionsInBulk = async function (req, res) {
 };
 
 // Delete SolutionBank entry
-exports.deleteSolutionBankById = async function (req, res) {
+exports.deleteSolutionBankByTest = async function (req, res) {
     try {
-        const deletedEntry = await SolutionBank.findByIdAndDelete(req.params.entryId);
+        const { stream, questionType, testName, date } = req.query;
+        const filter = {};
 
-        if (!deletedEntry) {
-            return res.status(404).json({ status: "error", message: "SolutionBank entry not found" });
+        // Add filters
+        if (stream) filter.stream = stream;
+        if (questionType) filter.questionType = questionType;
+        if (testName) filter.testName = testName;
+        if (date) filter.date = new Date(date);
+
+        // First find all matching solutions to get their IDs
+        const solutions = await Solution.find(filter);
+        if (solutions.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "No solutions found matching these filters"
+            });
         }
 
-        res.status(200).json({ status: "success", message: "Entry deleted successfully" });
+        const solutionIds = solutions.map(s => s._id);
+
+        // Delete all solution bank entries first
+        const bankResult = await SolutionBank.deleteMany({
+            solutionRef: { $in: solutionIds }
+        });
+
+        // Then delete the solutions
+        const solutionResult = await Solution.deleteMany({
+            _id: { $in: solutionIds }
+        });
+
+        res.status(200).json({
+            status: "success",
+            deletedCount: solutionResult.deletedCount,
+            message: `Deleted ${solutionResult.deletedCount} solutions and ${bankResult.deletedCount} solution bank entries`
+        });
 
     } catch (err) {
-        res.status(400).json({ status: "error", message: err.message });
+        console.error("Error in deleteSolutionBankByTest:", err);
+        res.status(500).json({
+            status: "error",
+            message: err.message
+        });
     }
 };
