@@ -156,21 +156,28 @@ exports.getAllReportBank = async (req, res) => {
         const entries = await ReportBank.find()
             .populate('reportRef');
 
-        // Format response for better readability
-        const formattedEntries = entries.map(entry => ({
-            reportId: entry.reportRef._id,
-            stream: entry.reportRef.stream,
-            testName: entry.reportRef.testName,
-            date: entry.reportRef.date,
-            marksType: entry.reportRef.marksType,
-            regNumber: entry.regNumber,
-            questionAnswers: Object.fromEntries(entry.questionAnswer)
-        }));
+        // Filter out entries with missing reportRef and format response
+        const formattedEntries = entries
+            .filter(entry => entry.reportRef) // Filter out null reportRefs
+            .map(entry => ({
+                reportId: entry.reportRef._id,
+                stream: entry.reportRef.stream,
+                testName: entry.reportRef.testName,
+                date: entry.reportRef.date,
+                marksType: entry.reportRef.marksType,
+                regNumber: entry.regNumber,
+                questionAnswers: entry.questionAnswer instanceof Map 
+                    ? Object.fromEntries(entry.questionAnswer) 
+                    : entry.questionAnswer || {}
+            }));
 
         res.status(200).json({
             status: "success",
             count: formattedEntries.length,
-            data: formattedEntries
+            data: formattedEntries,
+            warnings: entries.length !== formattedEntries.length 
+                ? `Filtered out ${entries.length - formattedEntries.length} entries with missing report references` 
+                : undefined
         });
 
     } catch (err) {
