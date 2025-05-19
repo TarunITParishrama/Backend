@@ -152,20 +152,19 @@ exports.getReportBank = async (req, res) => {
 // Get ALL ReportBank entries without filters
 exports.getAllReportBank = async (req, res) => {
     try {
-        // Get all ReportBank entries with populated data
-        const entries = await ReportBank.find()
-            .populate('reportRef');
+        const entries = await ReportBank.find().populate('reportRef');
 
-        // Format response for better readability
-        const formattedEntries = entries.map(entry => ({
-            reportId: entry.reportRef._id,
-            stream: entry.reportRef.stream,
-            testName: entry.reportRef.testName,
-            date: entry.reportRef.date,
-            marksType: entry.reportRef.marksType,
-            regNumber: entry.regNumber,
-            questionAnswers: Object.fromEntries(entry.questionAnswer)
-        }));
+        const formattedEntries = entries
+            .filter(entry => entry.reportRef) // Skip entries with null reportRef
+            .map(entry => ({
+                reportId: entry.reportRef._id,
+                stream: entry.reportRef.stream,
+                testName: entry.reportRef.testName,
+                date: entry.reportRef.date,
+                marksType: entry.reportRef.marksType,
+                regNumber: entry.regNumber,
+                questionAnswers: Object.fromEntries(entry.questionAnswer || [])
+            }));
 
         res.status(200).json({
             status: "success",
