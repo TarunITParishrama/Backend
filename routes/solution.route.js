@@ -11,5 +11,6 @@ router.delete("/api/deletesolution/:solutionId", solutionController.deleteSoluti
 // SolutionBank routes
 router.put("/api/updatesolutionbank/:entryId", solutionController.updateSolutionBankById);
 router.put("/api/updatesolutionsinbulk", solutionController.updateSolutionsInBulk);
-router.delete("/api/deletesolutionbankbytest", solutionController.deleteSolutionBankByTest);
+router.delete("/api/deletesolutionbank/:entryId", solutionController.deleteSolutionBankById);
+
 module.exports = router;

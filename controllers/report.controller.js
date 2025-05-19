@@ -156,28 +156,21 @@ exports.getAllReportBank = async (req, res) => {
         const entries = await ReportBank.find()
             .populate('reportRef');
 
-        // Filter out entries with missing reportRef and format response
-        const formattedEntries = entries
-            .filter(entry => entry.reportRef) // Filter out null reportRefs
-            .map(entry => ({
-                reportId: entry.reportRef._id,
-                stream: entry.reportRef.stream,
-                testName: entry.reportRef.testName,
-                date: entry.reportRef.date,
-                marksType: entry.reportRef.marksType,
-                regNumber: entry.regNumber,
-                questionAnswers: entry.questionAnswer instanceof Map 
-                    ? Object.fromEntries(entry.questionAnswer) 
-                    : entry.questionAnswer || {}
-            }));
+        // Format response for better readability
+        const formattedEntries = entries.map(entry => ({
+            reportId: entry.reportRef._id,
+            stream: entry.reportRef.stream,
+            testName: entry.reportRef.testName,
+            date: entry.reportRef.date,
+            marksType: entry.reportRef.marksType,
+            regNumber: entry.regNumber,
+            questionAnswers: Object.fromEntries(entry.questionAnswer)
+        }));
 
         res.status(200).json({
             status: "success",
             count: formattedEntries.length,
-            data: formattedEntries,
-            warnings: entries.length !== formattedEntries.length 
-                ? `Filtered out ${entries.length - formattedEntries.length} entries with missing report references` 
-                : undefined
+            data: formattedEntries
         });
 
     } catch (err) {
@@ -313,60 +306,5 @@ exports.deleteReportBankById = async function (req, res) {
 
     } catch (err) {
         res.status(400).json({ status: "error", message: err.message });
-    }
-};
-
-// Add this to your report.controller.js
-exports.deleteReportBankByTest = async (req, res) => {
-    try {
-        const { testName, stream, dateFrom, dateTo } = req.query;
-
-        // Validate required parameters
-        if (!testName || !stream || !dateFrom || !dateTo) {
-            return res.status(400).json({
-                status: "error",
-                message: "testName, stream, dateFrom and dateTo are required"
-            });
-        }
-
-        // Find matching reports
-        const reports = await Report.find({
-            testName,
-            stream,
-            date: {
-                $gte: new Date(dateFrom),
-                $lte: new Date(dateTo)
-            }
-        });
-
-        if (reports.length === 0) {
-            return res.status(404).json({
-                status: "error",
-                message: "No reports found matching criteria"
-            });
-        }
-
-        // Delete all associated ReportBank entries
-        const deleteResult = await ReportBank.deleteMany({
-            reportRef: { $in: reports.map(r => r._id) }
-        });
-
-        // Delete the reports themselves
-        await Report.deleteMany({
-            _id: { $in: reports.map(r => r._id) }
-        });
-
-        res.status(200).json({
-            status: "success",
-            deletedCount: deleteResult.deletedCount,
-            message: `Deleted ${deleteResult.deletedCount} report bank entries and ${reports.length} reports`
-        });
-
-    } catch (err) {
-        console.error("Error in deleteReportBankByTest:", err);
-        res.status(500).json({
-            status: "error",
-            message: err.message || "Failed to delete reports"
-        });
     }
 };

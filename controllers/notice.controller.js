@@ -14,24 +14,16 @@ cron.schedule('* * * * *', async () => { // Runs every minute
 });
 
 // Create a new notice
-// Create a new notice
 exports.createNotice = async (req, res) => {
   try {
     const { subject, message, dropDate, dropTime } = req.body;
     
-    // Validate required fields
-    if (!subject || !message || !dropDate || !dropTime) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'All fields including createdBy are required'
-      });
-    }
-
     const notice = await Notice.create({
       subject,
       message,
       dropDate,
       dropTime,
+      createdBy: req.user.id
     });
 
     res.status(201).json({
@@ -51,6 +43,7 @@ exports.getActiveNotices = async (req, res) => {
   try {
     const notices = await Notice.find({ status: 'active' })
       .sort('-dropDate')
+      .populate('createdBy', 'name role');
 
     res.status(200).json({
       status: 'success',
@@ -70,6 +63,7 @@ exports.getAllNotices = async (req, res) => {
   try {
     const notices = await Notice.find()
       .sort('-createdAt')
+      .populate('createdBy', 'name role');
 
     res.status(200).json({
       status: 'success',
