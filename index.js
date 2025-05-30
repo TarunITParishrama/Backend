@@ -67,6 +67,9 @@ app.use('/', PatternsRoute)
 const DetailedReportRoute = require('./routes/detailedreport.route');
 app.use('/', DetailedReportRoute);
 
+const FeedbackRoute = require('./routes/feedback.route');
+app.use('/', FeedbackRoute);
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

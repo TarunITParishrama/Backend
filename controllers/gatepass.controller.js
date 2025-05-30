@@ -59,7 +59,8 @@ exports.getStudentDetails = async (req, res) => {
         studentRegNumber: student.regNumber,
         studentName: student.studentName,
         parentName: student.fatherName,
-        parentMobile: student.fatherMobile
+        parentMobile: student.fatherMobile,
+        emailId: student.emailId
       }
     });
   } catch (error) {

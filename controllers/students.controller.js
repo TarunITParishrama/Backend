@@ -7,6 +7,8 @@ const {
   deleteFile
 } = require('../utils/s3.js');
 const path = require('path');
+const exceljs = require('exceljs');
+
 
 // Helper function to get file extension
 const getFileExtension = (filename) => {
@@ -414,6 +416,90 @@ exports.searchStudents = async (req, res) => {
     res.status(200).json({ status: "success", data: students });
   } catch (error) {
     res.status(400).json({ status: "error", message: error.message });
+  }
+};
+
+exports.downloadTemplate = async (req, res) => {
+  try {
+    // Create a new workbook
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('Students Template');
+    
+    // Add headers
+    worksheet.columns = [
+      { header: 'admissionYear', key: 'admissionYear' },
+      { header: 'campus', key: 'campus' },
+      { header: 'gender', key: 'gender' },
+      { header: 'admissionType', key: 'admissionType' },
+      { header: 'regNumber', key: 'regNumber' },
+      { header: 'studentName', key: 'studentName' },
+      { header: 'dateOfBirth', key: 'dateOfBirth' },
+      { header: 'allotmentType', key: 'allotmentType' },
+      { header: 'section', key: 'section' },
+      { header: 'fatherName', key: 'fatherName' },
+      { header: 'fatherMobile', key: 'fatherMobile' },
+      { header: 'emailId', key: 'emailId' },
+      { header: 'address', key: 'address' },
+      { header: 'contact', key: 'contact' },
+      { header: 'medicalIssues', key: 'medicalIssues' },
+      { header: 'medicalDetails', key: 'medicalDetails' }
+    ];
+
+    worksheet.addRow({
+      admissionYear: '2023',
+      campus: 'Campus ID or Name',
+      gender: 'Boy/Girl',
+      admissionType: 'Residential/Semi-Residential/Non-Residential',
+      regNumber: '123456 (6 digits)',
+      studentName: 'Student Full Name',
+      dateOfBirth: 'DD-MM-YYYY',
+      allotmentType: '11th PUC/12th PUC/LongTerm',
+      section: 'PRB-A',
+      fatherName: "Parent's Name",
+      fatherMobile: '9876543210',
+      emailId: 'parent@example.com (optional)',
+      address: 'Full address',
+      contact: 'Alternate contact number',
+      medicalIssues: 'No/Yes',
+      medicalDetails: 'Details if medicalIssues is Yes'
+    });
+
+    // Style the header row
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD9E1F2' }
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    // Set response headers
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=student_template.xlsx'
+    );
+
+    // Send the workbook
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error generating template:', error);
+    res.status(500).json({ 
+      status: "error", 
+      message: "Failed to generate template" 
+    });
   }
 };
 

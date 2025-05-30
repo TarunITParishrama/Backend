@@ -61,6 +61,12 @@ const studentSchema = new mongoose.Schema(
       required: true,
       match: /^\d{10}$/ 
     },
+    emailId: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      match: [/\S+@\S+\.\S+/, 'is invalid'] 
+    },
     address: {
       type: String,
       required: true,

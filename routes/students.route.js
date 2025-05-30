@@ -15,6 +15,7 @@ router.get("/api/checkregnumber/:regNumber", studentController.checkRegNumber);
 router.delete("/api/deletestudent/:id", studentController.deleteStudent);
 router.delete("/api/delete-student-image/:regNumber", studentController.deleteStudentImage);
 router.get("/api/getstudentsbycampus/:campusId", studentController.getStudentsByCampus);
+router.get("/api/download-student-template", studentController.downloadTemplate);
 
 // Image upload route
 router.get("/api/generate-image-upload-url/:regNumber/:fileExtension", studentController.generateImageUploadURL);
