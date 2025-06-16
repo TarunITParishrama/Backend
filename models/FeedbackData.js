@@ -37,6 +37,11 @@ const questionSchema = new mongoose.Schema({
 });
 
 const feedbackDataSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    maxlength: 100
+  },
   date: { 
     type: Date, 
     required: true 

@@ -7,10 +7,10 @@ const Campus = require("../models/Campus");
 
 exports.createFeedbackForm = async (req, res) => {
   try {
-    const { questions } = req.body;
+    const { name, questions } = req.body;
     
     // Validate questions array
-    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    if (!name || !questions || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({
         status: "error",
         message: "At least one question is required"
@@ -18,6 +18,7 @@ exports.createFeedbackForm = async (req, res) => {
     }
 
     const feedbackForm = await FeedbackForm.create({
+      name,
       questions,
     });
 
@@ -62,9 +63,9 @@ exports.getFeedbackForms = async (req, res) => {
 
 exports.updateFeedbackForm = async (req, res) => {
   try {
-    const { questions } = req.body;
+    const { name, questions } = req.body;
     
-    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    if (!name || !questions || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({
         status: "error",
         message: "At least one question is required"
@@ -73,7 +74,7 @@ exports.updateFeedbackForm = async (req, res) => {
 
     const feedbackForm = await FeedbackForm.findOneAndUpdate(
       { _id: req.params.id },
-      { questions },
+      { name, questions },
       { new: true, runValidators: true }
     );
 
@@ -136,13 +137,13 @@ exports.deleteFeedbackForm = async (req, res) => {
 
 exports.createFeedback = async (req, res) => {
   try {
-    const { date, questionNumbers } = req.body;
+    const { name, date, questionNumbers } = req.body;
     
     // Validate date
-    if (!date) {
+    if (!date || !name) {
       return res.status(400).json({
         status: "error",
-        message: "Date is required"
+        message: "Name & Date is required"
       });
     }
 
@@ -172,6 +173,7 @@ exports.createFeedback = async (req, res) => {
 
     // Create new feedback
     const feedback = await Feedback.create({
+      name, 
       date,
       questions: selectedQuestions,
       options: feedbackForm.options,
@@ -198,7 +200,7 @@ exports.createFeedback = async (req, res) => {
 
 exports.getFeedbacks = async (req, res) => {
   try {
-    const { date } = req.query;
+    const { name, date } = req.query;
     let query = {};
     
     if (date) {
@@ -266,10 +268,10 @@ exports.deleteFeedback = async (req, res) => {
 };
 
 // FeedbackData CRUD operations
-
 exports.createFeedbackData = async (req, res) => {
   try {
     const { 
+      name,
       date, 
       streamType, 
       campus, 
@@ -279,7 +281,7 @@ exports.createFeedbackData = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!date || !streamType || !studentCount || !questions) {
+    if (!name || !date || !streamType || !studentCount || !questions) {
       return res.status(400).json({
         status: "error",
         message: "Missing required fields"
@@ -329,6 +331,7 @@ exports.createFeedbackData = async (req, res) => {
     responseCount = respondingStudents.size;
     
     const feedbackData = await FeedbackData.create({
+      name,
       date,
       streamType,
       campus: streamType === "LongTerm" ? campus : undefined,
@@ -370,7 +373,7 @@ exports.bulkCreateFeedbackData = async (req, res) => {
     
     for (const item of data) {
       try {
-        const { date, questions, campus, campusCount } = item;
+        const { name, date, questions, campus, campusCount } = item;
         
         // Get campus details
         const campusDoc = await Campus.findById(campus);
@@ -463,7 +466,7 @@ exports.bulkCreateFeedbackData = async (req, res) => {
 
 exports.getFeedbackData = async (req, res) => {
   try {
-    const { date, streamType, campus, section } = req.query;
+    const { name, date, streamType, campus, section } = req.query;
     const query = {};
     
     // Improved date handling
@@ -520,7 +523,7 @@ exports.getFeedbackData = async (req, res) => {
 
 exports.updateFeedbackData = async (req, res) => {
   try {
-    const { questions, campusCount } = req.body;
+    const { name, questions, campusCount } = req.body;
     
     // Find existing feedback data
     const existingData = await FeedbackData.findOne({

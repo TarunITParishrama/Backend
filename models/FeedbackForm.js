@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const feedbackFormSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      required: true,
+      maxlength: 100
+    },
     questions: [
       {
         questionNumber: {

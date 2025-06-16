@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const feedbackSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      required: true,
+      maxlength: 100
+    },
     date: {
       type: Date,
       required: true,
