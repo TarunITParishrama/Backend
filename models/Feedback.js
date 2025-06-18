@@ -7,6 +7,11 @@ const feedbackSchema = new mongoose.Schema(
       required: true,
       maxlength: 100
     },
+    feedbackForm:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FeedbackForm",
+      required: true
+    },
     date: {
       type: Date,
       required: true,

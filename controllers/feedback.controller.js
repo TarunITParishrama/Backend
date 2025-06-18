@@ -173,7 +173,8 @@ exports.createFeedback = async (req, res) => {
 
     // Create new feedback
     const feedback = await Feedback.create({
-      name, 
+      name: feedbackForm.name,
+      feedbackForm: feedbackForm._id, 
       date,
       questions: selectedQuestions,
       options: feedbackForm.options,
