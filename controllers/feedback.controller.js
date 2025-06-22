@@ -133,33 +133,29 @@ exports.deleteFeedbackForm = async (req, res) => {
   }
 };
 
-// Feedback CRUD operations
-
+// controllers/feedback.controller.js
 exports.createFeedback = async (req, res) => {
   try {
-    const { name, date, questionNumbers } = req.body;
+    const { name, date, questionNumbers, feedbackFormId, createdBy } = req.body;
     
-    // Validate date
-    if (!date || !name) {
+    // Validate required fields
+    if (!name || !date || !questionNumbers || !feedbackFormId) {
       return res.status(400).json({
         status: "error",
-        message: "Name & Date is required"
+        message: "Name, date, question numbers and feedback form ID are required"
       });
     }
 
-    // Get the latest feedback form (regardless of creator)
-    const feedbackForm = await FeedbackForm.findOne()
-      .sort({ createdAt: -1 })
-      .limit(1);
-
+    // Verify feedback form exists
+    const feedbackForm = await FeedbackForm.findById(feedbackFormId);
     if (!feedbackForm) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: "error",
-        message: "No feedback form found. Please create one first."
+        message: "Feedback form not found"
       });
     }
 
-    // Filter questions based on selected question numbers
+    // Filter questions
     const selectedQuestions = feedbackForm.questions.filter(question => 
       questionNumbers.includes(question.questionNumber)
     );
@@ -171,14 +167,14 @@ exports.createFeedback = async (req, res) => {
       });
     }
 
-    // Create new feedback
+    // Create feedback
     const feedback = await Feedback.create({
-      name: feedbackForm.name,
-      feedbackForm: feedbackForm._id, 
+      name,
+      feedbackForm: feedbackForm._id,
       date,
       questions: selectedQuestions,
       options: feedbackForm.options,
-      ...(req.body.createdBy && { createdBy: req.body.createdBy }) // Optional
+      createdBy: createdBy || req.user._id
     });
 
     res.status(201).json({
@@ -201,7 +197,7 @@ exports.createFeedback = async (req, res) => {
 
 exports.getFeedbacks = async (req, res) => {
   try {
-    const { name, date } = req.query;
+    const { date, name } = req.query;
     let query = {};
     
     if (date) {
@@ -225,7 +221,12 @@ exports.getFeedbacks = async (req, res) => {
       };
     }
 
+    if (name) {
+      query.name = { $regex: name, $options: 'i' };
+    }
+
     const feedbacks = await Feedback.find(query)
+      .populate('feedbackForm', 'name') // Populate the feedbackForm name
       .sort({ createdAt: -1 })
       .lean();
 
@@ -234,7 +235,6 @@ exports.getFeedbacks = async (req, res) => {
       data: feedbacks || []
     });
   } catch (err) {
-    console.error('Error fetching feedback forms:', err);
     res.status(400).json({
       status: "error",
       message: err.message
@@ -278,11 +278,12 @@ exports.createFeedbackData = async (req, res) => {
       campus, 
       section, 
       studentCount, 
+      responseCount, // Use the responseCount from the request body
       questions 
     } = req.body;
 
     // Validate required fields
-    if (!name || !date || !streamType || !studentCount || !questions) {
+    if (!name || !date || !streamType || !studentCount || !questions || responseCount === undefined) {
       return res.status(400).json({
         status: "error",
         message: "Missing required fields"
@@ -314,10 +315,6 @@ exports.createFeedbackData = async (req, res) => {
     let optionCCount = 0;
     let optionDCount = 0;
     let noResponseCount = 0;
-    let responseCount = 0;
-
-    const respondingStudents = new Set();
-
 
     questions.forEach(question => {
       optionACount += question.countA;
@@ -325,20 +322,16 @@ exports.createFeedbackData = async (req, res) => {
       optionCCount += question.countC;
       optionDCount += question.countD;
       noResponseCount += question.noResponse;
-      question.responses.forEach(response =>{
-        respondingStudents.add(response.studentId || response._id);
-      });
     });
-    responseCount = respondingStudents.size;
-    
+
     const feedbackData = await FeedbackData.create({
       name,
       date,
       streamType,
-      campus: streamType === "LongTerm" ? campus : undefined,
-      section: streamType === "PUC" ? section : undefined,
+      campus: streamType === "LongTerm" ? campus : null,
+      section: streamType === "PUC" ? section : null,
       studentCount,
-      responseCount: responseCount / questions.length, // Average responses per question
+      responseCount, // Use the responseCount directly from the request
       questions,
       optionACount,
       optionBCount,
@@ -469,6 +462,10 @@ exports.getFeedbackData = async (req, res) => {
   try {
     const { name, date, streamType, campus, section } = req.query;
     const query = {};
+
+    if(name){
+      query.name = name;
+    }
     
     // Improved date handling
     if (date) {

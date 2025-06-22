@@ -90,4 +90,10 @@ const feedbackDataSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+feedbackDataSchema.index(
+  { date: 1, name: 1, streamType: 1, section: 1, campus: 1 },
+  { unique: true }
+);
+
+
 module.exports = mongoose.model("FeedbackData", feedbackDataSchema);
