@@ -18,6 +18,8 @@ router.delete("/api/deletefeedback/:id", feedbackController.deleteFeedback);
 router.post("/api/createfeedbackdata", feedbackController.createFeedbackData);
 router.post("/api/bulkcreatefeedbackdata", feedbackController.bulkCreateFeedbackData);
 router.get("/api/getfeedbackdata", authMiddleware.protect, feedbackController.getFeedbackData);
+router.get("/api/getfeedbackdata/dates",authMiddleware.protect,feedbackController.getAvailableFeedbackDates);
+
 router.put("/api/updatefeedbackdata/:id", feedbackController.updateFeedbackData);
 router.delete("/api/deletefeedbackdata/:id", feedbackController.deleteFeedbackData);
 

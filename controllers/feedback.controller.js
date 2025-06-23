@@ -519,6 +519,26 @@ exports.getFeedbackData = async (req, res) => {
   }
 };
 
+exports.getAvailableFeedbackDates = async (req, res) => {
+  try {
+    const dates = await FeedbackData.distinct('date'); // Just get distinct date values
+
+    // Optional: sort by latest first
+    dates.sort((a, b) => new Date(b) - new Date(a));
+
+    res.status(200).json({
+      status: "success",
+      data: dates
+    });
+  } catch (err) {
+    console.error('Error fetching feedback dates:', err);
+    res.status(400).json({
+      status: "error",
+      message: err.message
+    });
+  }
+};
+
 exports.updateFeedbackData = async (req, res) => {
   try {
     const { name, questions, campusCount } = req.body;
