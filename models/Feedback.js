@@ -5,29 +5,29 @@ const feedbackSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      maxlength: 100
+      maxlength: 100,
     },
-    feedbackForm:{
+    feedbackForm: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "FeedbackForm",
-      required: true
+      required: true,
     },
     date: {
       type: Date,
       required: true,
-      unique: true
+      unique: true,
     },
     questions: [
       {
         questionNumber: {
           type: String,
-          required: true
+          required: true,
         },
         questionStatement: {
           type: String,
-          required: true
-        }
-      }
+          required: true,
+        },
+      },
     ],
     options: {
       type: Map,
@@ -36,15 +36,15 @@ const feedbackSchema = new mongoose.Schema(
         A: "Excellent",
         B: "Good",
         C: "Average",
-        D: "Poor"
-      }
+        D: "Poor",
+      },
     },
     createdBy: {
-      type: String
-    }
+      type: String,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

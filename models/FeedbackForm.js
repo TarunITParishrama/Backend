@@ -5,21 +5,21 @@ const feedbackFormSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      maxlength: 100
+      maxlength: 100,
     },
     questions: [
       {
         questionNumber: {
           type: String,
           required: true,
-          match: [/^Q\d+$/, "Question number must be in format Q1, Q2, etc."]
+          match: [/^Q\d+$/, "Question number must be in format Q1, Q2, etc."],
         },
         questionStatement: {
           type: String,
           required: true,
-          maxlength: 500
-        }
-      }
+          maxlength: 500,
+        },
+      },
     ],
     options: {
       type: Map,
@@ -28,16 +28,16 @@ const feedbackFormSchema = new mongoose.Schema(
         A: "Excellent",
         B: "Good",
         C: "Average",
-        D: "Poor"
-      }
+        D: "Poor",
+      },
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-    }
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

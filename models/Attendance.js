@@ -5,47 +5,47 @@ const attendanceSchema = new mongoose.Schema(
     regNumber: {
       type: String,
       required: true,
-      ref: 'Student'
+      ref: "Student",
     },
     studentName: {
       type: String,
-      required: true
+      required: true,
     },
     section: {
       type: String,
-      required: true
+      required: true,
     },
     campus: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Campus',
-      required: true
+      ref: "Campus",
+      required: true,
     },
     subject: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Subject',
-      required: true
+      ref: "Subject",
+      required: true,
     },
     period: {
       type: String,
-      required: true
+      required: true,
     },
     date: {
       type: Date,
       required: true,
-      default: Date.now
+      default: Date.now,
     },
     present: {
       type: Boolean,
-      default: false
+      default: false,
     },
     absent: {
       type: Boolean,
-      default: false
+      default: false,
     },
     forgiven: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -9,12 +9,21 @@ router.post("/api/createtheory", theoryTestController.createTheoryTest);
 router.get("/api/gettheorytests", theoryTestController.getAllTheoryTests);
 
 // Get theory tests by stream
-router.get("/api/gettheorytests/:stream", theoryTestController.getTheoryTestsByStream);
+router.get(
+  "/api/gettheorytests/:stream",
+  theoryTestController.getTheoryTestsByStream
+);
 
 // Get student's theory test results
-router.get("/api/getstudenttheory/:regNumber", theoryTestController.getStudentTheoryResults);
+router.get(
+  "/api/getstudenttheory/:regNumber",
+  theoryTestController.getStudentTheoryResults
+);
 
 // Get specific theory test by ID
-router.get("/api/gettheorytest/:testId", theoryTestController.getTheoryTestById);
+router.get(
+  "/api/gettheorytest/:testId",
+  theoryTestController.getTheoryTestById
+);
 
 module.exports = router;

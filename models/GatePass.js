@@ -4,65 +4,65 @@ const gatePassSchema = new mongoose.Schema(
   {
     campus: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Campus',
-      required: true
+      ref: "Campus",
+      required: true,
     },
     studentRegNumber: {
       type: String,
       required: true,
-      match: /^\d{6}$/
+      match: /^\d{6}$/,
     },
     studentName: {
       type: String,
-      required: true
+      required: true,
     },
     date: {
       type: Date,
       required: true,
-      default: Date.now
+      default: Date.now,
     },
     time: {
       type: String,
-      required: true
+      required: true,
     },
     parentName: {
       type: String,
-      required: true
+      required: true,
     },
     parentMobile: {
       type: String,
       required: true,
-      match: /^\d{10}$/
+      match: /^\d{10}$/,
     },
     escorterName: {
       type: String,
-      required: true
+      required: true,
     },
     escorterMobile: {
       type: String,
       required: true,
-      match: /^\d{10}$/
+      match: /^\d{10}$/,
     },
     wardenName: {
       type: String,
-      required: true
+      required: true,
     },
     imageURL: {
       type: String,
-      required: true
+      required: true,
     },
     otp: {
       type: String,
-      required: true
+      required: true,
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    }
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 

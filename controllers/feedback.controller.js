@@ -8,12 +8,17 @@ const Campus = require("../models/Campus");
 exports.createFeedbackForm = async (req, res) => {
   try {
     const { name, questions } = req.body;
-    
+
     // Validate questions array
-    if (!name || !questions || !Array.isArray(questions) || questions.length === 0) {
+    if (
+      !name ||
+      !questions ||
+      !Array.isArray(questions) ||
+      questions.length === 0
+    ) {
       return res.status(400).json({
         status: "error",
-        message: "At least one question is required"
+        message: "At least one question is required",
       });
     }
 
@@ -29,34 +34,33 @@ exports.createFeedbackForm = async (req, res) => {
         A: "Excellent",
         B: "Good",
         C: "Average",
-        D: "Poor"
-      }
+        D: "Poor",
+      },
     };
 
     res.status(201).json({
       status: "success",
-      data: responseData
+      data: responseData,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
 
 exports.getFeedbackForms = async (req, res) => {
   try {
-    const feedbackForms = await FeedbackForm.find()
-      .sort({ createdAt: -1 }); // Newest first
+    const feedbackForms = await FeedbackForm.find().sort({ createdAt: -1 }); // Newest first
     res.status(200).json({
       status: "success",
-      data: feedbackForms
+      data: feedbackForms,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -64,11 +68,16 @@ exports.getFeedbackForms = async (req, res) => {
 exports.updateFeedbackForm = async (req, res) => {
   try {
     const { name, questions } = req.body;
-    
-    if (!name || !questions || !Array.isArray(questions) || questions.length === 0) {
+
+    if (
+      !name ||
+      !questions ||
+      !Array.isArray(questions) ||
+      questions.length === 0
+    ) {
       return res.status(400).json({
         status: "error",
-        message: "At least one question is required"
+        message: "At least one question is required",
       });
     }
 
@@ -81,7 +90,7 @@ exports.updateFeedbackForm = async (req, res) => {
     if (!feedbackForm) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback form not found"
+        message: "Feedback form not found",
       });
     }
 
@@ -92,18 +101,18 @@ exports.updateFeedbackForm = async (req, res) => {
         A: "Excellent",
         B: "Good",
         C: "Average",
-        D: "Poor"
-      }
+        D: "Poor",
+      },
     };
 
     res.status(200).json({
       status: "success",
-      data: responseData
+      data: responseData,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -117,18 +126,18 @@ exports.deleteFeedbackForm = async (req, res) => {
     if (!feedbackForm) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback form not found"
+        message: "Feedback form not found",
       });
     }
 
     res.status(204).json({
       status: "success",
-      data: null
+      data: null,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -137,12 +146,13 @@ exports.deleteFeedbackForm = async (req, res) => {
 exports.createFeedback = async (req, res) => {
   try {
     const { name, date, questionNumbers, feedbackFormId, createdBy } = req.body;
-    
+
     // Validate required fields
     if (!name || !date || !questionNumbers || !feedbackFormId) {
       return res.status(400).json({
         status: "error",
-        message: "Name, date, question numbers and feedback form ID are required"
+        message:
+          "Name, date, question numbers and feedback form ID are required",
       });
     }
 
@@ -151,19 +161,19 @@ exports.createFeedback = async (req, res) => {
     if (!feedbackForm) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback form not found"
+        message: "Feedback form not found",
       });
     }
 
     // Filter questions
-    const selectedQuestions = feedbackForm.questions.filter(question => 
+    const selectedQuestions = feedbackForm.questions.filter((question) =>
       questionNumbers.includes(question.questionNumber)
     );
 
     if (selectedQuestions.length !== questionNumbers.length) {
       return res.status(400).json({
         status: "error",
-        message: "Some question numbers are invalid"
+        message: "Some question numbers are invalid",
       });
     }
 
@@ -174,23 +184,23 @@ exports.createFeedback = async (req, res) => {
       date,
       questions: selectedQuestions,
       options: feedbackForm.options,
-      createdBy: createdBy || req.user._id
+      createdBy: createdBy || req.user._id,
     });
 
     res.status(201).json({
       status: "success",
-      data: feedback
+      data: feedback,
     });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({
         status: "error",
-        message: "Feedback for this date already exists"
+        message: "Feedback for this date already exists",
       });
     }
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -199,45 +209,45 @@ exports.getFeedbacks = async (req, res) => {
   try {
     const { date, name } = req.query;
     let query = {};
-    
+
     if (date) {
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) {
         return res.status(400).json({
           status: "error",
-          message: "Invalid date format"
+          message: "Invalid date format",
         });
       }
-      
+
       const startOfDay = new Date(dateObj);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(dateObj);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       query.date = {
         $gte: startOfDay,
-        $lte: endOfDay
+        $lte: endOfDay,
       };
     }
 
     if (name) {
-      query.name = { $regex: name, $options: 'i' };
+      query.name = { $regex: name, $options: "i" };
     }
 
     const feedbacks = await Feedback.find(query)
-      .populate('feedbackForm', 'name') // Populate the feedbackForm name
+      .populate("feedbackForm", "name") // Populate the feedbackForm name
       .sort({ createdAt: -1 })
       .lean();
 
     res.status(200).json({
       status: "success",
-      data: feedbacks || []
+      data: feedbacks || [],
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -246,24 +256,24 @@ exports.deleteFeedback = async (req, res) => {
   try {
     const feedback = await Feedback.findOneAndDelete({
       _id: req.params.id,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     if (!feedback) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback not found"
+        message: "Feedback not found",
       });
     }
 
     res.status(204).json({
       status: "success",
-      data: null
+      data: null,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -271,22 +281,29 @@ exports.deleteFeedback = async (req, res) => {
 // FeedbackData CRUD operations
 exports.createFeedbackData = async (req, res) => {
   try {
-    const { 
+    const {
       name,
-      date, 
-      streamType, 
-      campus, 
-      section, 
-      studentCount, 
+      date,
+      streamType,
+      campus,
+      section,
+      studentCount,
       responseCount, // Use the responseCount from the request body
-      questions 
+      questions,
     } = req.body;
 
     // Validate required fields
-    if (!name || !date || !streamType || !studentCount || !questions || responseCount === undefined) {
+    if (
+      !name ||
+      !date ||
+      !streamType ||
+      !studentCount ||
+      !questions ||
+      responseCount === undefined
+    ) {
       return res.status(400).json({
         status: "error",
-        message: "Missing required fields"
+        message: "Missing required fields",
       });
     }
 
@@ -298,14 +315,14 @@ exports.createFeedbackData = async (req, res) => {
     const feedbackForm = await Feedback.findOne({
       date: {
         $gte: startOfDay,
-        $lte: endOfDay
-      }
+        $lte: endOfDay,
+      },
     });
 
     if (!feedbackForm) {
       return res.status(404).json({
         status: "error",
-        message: "No feedback form found for this date"
+        message: "No feedback form found for this date",
       });
     }
 
@@ -316,7 +333,7 @@ exports.createFeedbackData = async (req, res) => {
     let optionDCount = 0;
     let noResponseCount = 0;
 
-    questions.forEach(question => {
+    questions.forEach((question) => {
       optionACount += question.countA;
       optionBCount += question.countB;
       optionCCount += question.countC;
@@ -337,17 +354,17 @@ exports.createFeedbackData = async (req, res) => {
       optionBCount,
       optionCCount,
       optionDCount,
-      noResponseCount
+      noResponseCount,
     });
 
     res.status(201).json({
       status: "success",
-      data: feedbackData
+      data: feedbackData,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -355,60 +372,67 @@ exports.createFeedbackData = async (req, res) => {
 exports.bulkCreateFeedbackData = async (req, res) => {
   try {
     const { data } = req.body;
-    
+
     if (!Array.isArray(data) || data.length === 0) {
       return res.status(400).json({
         status: "error",
-        message: "Data must be a non-empty array"
+        message: "Data must be a non-empty array",
       });
     }
 
     const results = [];
-    
+
     for (const item of data) {
       try {
         const { name, date, questions, campus, campusCount } = item;
-        
+
         // Get campus details
         const campusDoc = await Campus.findById(campus);
         if (!campusDoc) {
           results.push({
             status: "error",
             message: `Campus not found for ID: ${campus}`,
-            data: null
+            data: null,
           });
           continue;
         }
 
         // Get feedback for the date to validate questions
-        const feedback = await Feedback.findOne({ date, createdBy: req.user._id });
+        const feedback = await Feedback.findOne({
+          date,
+          createdBy: req.user._id,
+        });
         if (!feedback) {
           results.push({
             status: "error",
             message: `No feedback form found for date: ${date}`,
-            data: null
+            data: null,
           });
           continue;
         }
 
         // Validate questions against feedback form
-        const feedbackQuestionNumbers = feedback.questions.map(q => q.questionNumber);
+        const feedbackQuestionNumbers = feedback.questions.map(
+          (q) => q.questionNumber
+        );
         const invalidQuestions = questions.filter(
-          q => !feedbackQuestionNumbers.includes(q.questionNumber)
+          (q) => !feedbackQuestionNumbers.includes(q.questionNumber)
         );
 
         if (invalidQuestions.length > 0) {
           results.push({
             status: "error",
-            message: `Invalid question numbers for date ${date}: ${invalidQuestions.map(q => q.questionNumber).join(", ")}`,
-            data: null
+            message: `Invalid question numbers for date ${date}: ${invalidQuestions
+              .map((q) => q.questionNumber)
+              .join(", ")}`,
+            data: null,
           });
           continue;
         }
 
         // Calculate option counts
         const optionCounts = { A: 0, B: 0, C: 0, D: 0 };
-        questions.forEach(q => {
+        questions.forEach((q) => {
           optionCounts[q.option]++;
         });
 
@@ -420,14 +444,14 @@ exports.bulkCreateFeedbackData = async (req, res) => {
               questions,
               campusName: campusDoc.name,
               campusCount,
-              createdBy: req.user._id
+              createdBy: req.user._id,
             },
             $inc: {
               optionACount: optionCounts.A,
               optionBCount: optionCounts.B,
               optionCCount: optionCounts.C,
-              optionDCount: optionCounts.D
-            }
+              optionDCount: optionCounts.D,
+            },
           },
           { new: true, upsert: true, runValidators: true }
         );
@@ -435,25 +459,25 @@ exports.bulkCreateFeedbackData = async (req, res) => {
         results.push({
           status: "success",
           message: "Feedback data created/updated successfully",
-          data: feedbackData
+          data: feedbackData,
         });
       } catch (err) {
         results.push({
           status: "error",
           message: err.message,
-          data: null
+          data: null,
         });
       }
     }
 
     res.status(201).json({
       status: "success",
-      data: results
+      data: results,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -463,10 +487,10 @@ exports.getFeedbackData = async (req, res) => {
     const { name, date, streamType, campus, section } = req.query;
     const query = {};
 
-    if(name){
+    if (name) {
       query.name = name;
     }
-    
+
     // Improved date handling
     if (date) {
       // Handle both ISO string and date object
@@ -474,29 +498,29 @@ exports.getFeedbackData = async (req, res) => {
       if (isNaN(dateObj.getTime())) {
         return res.status(400).json({
           status: "error",
-          message: "Invalid date format"
+          message: "Invalid date format",
         });
       }
-      
+
       const startOfDay = new Date(dateObj);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(dateObj);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       query.date = {
         $gte: startOfDay,
-        $lte: endOfDay
+        $lte: endOfDay,
       };
     }
 
     // Stream type filtering
     if (streamType) {
       query.streamType = streamType;
-      
-      if (streamType === 'LongTerm' && campus) {
+
+      if (streamType === "LongTerm" && campus) {
         query.campus = campus;
-      } else if (streamType === 'PUC' && section) {
+      } else if (streamType === "PUC" && section) {
         query.section = section;
       }
     }
@@ -508,33 +532,33 @@ exports.getFeedbackData = async (req, res) => {
     // Ensure consistent response format
     res.status(200).json({
       status: "success",
-      data: feedbackData || [] // Always return array
+      data: feedbackData || [], // Always return array
     });
   } catch (err) {
-    console.error('Error fetching feedback data:', err);
+    console.error("Error fetching feedback data:", err);
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
 
 exports.getAvailableFeedbackDates = async (req, res) => {
   try {
-    const dates = await FeedbackData.distinct('date'); // Just get distinct date values
+    const dates = await FeedbackData.distinct("date"); // Just get distinct date values
 
     // Optional: sort by latest first
     dates.sort((a, b) => new Date(b) - new Date(a));
 
     res.status(200).json({
       status: "success",
-      data: dates
+      data: dates,
     });
   } catch (err) {
-    console.error('Error fetching feedback dates:', err);
+    console.error("Error fetching feedback dates:", err);
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -542,17 +566,17 @@ exports.getAvailableFeedbackDates = async (req, res) => {
 exports.updateFeedbackData = async (req, res) => {
   try {
     const { name, questions, campusCount } = req.body;
-    
+
     // Find existing feedback data
     const existingData = await FeedbackData.findOne({
       _id: req.params.id,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
-    
+
     if (!existingData) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback data not found"
+        message: "Feedback data not found",
       });
     }
 
@@ -561,15 +585,15 @@ exports.updateFeedbackData = async (req, res) => {
       A: existingData.optionACount,
       B: existingData.optionBCount,
       C: existingData.optionCCount,
-      D: existingData.optionDCount
+      D: existingData.optionDCount,
     };
 
     if (questions) {
       // Reset counts to zero
       optionCounts = { A: 0, B: 0, C: 0, D: 0 };
-      
+
       // Recalculate based on new questions
-      questions.forEach(q => {
+      questions.forEach((q) => {
         optionCounts[q.option]++;
       });
     }
@@ -583,19 +607,19 @@ exports.updateFeedbackData = async (req, res) => {
         optionBCount: optionCounts.B,
         optionCCount: optionCounts.C,
         optionDCount: optionCounts.D,
-        campusCount: campusCount || existingData.campusCount
+        campusCount: campusCount || existingData.campusCount,
       },
       { new: true, runValidators: true }
     );
 
     res.status(200).json({
       status: "success",
-      data: updatedData
+      data: updatedData,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -604,24 +628,24 @@ exports.deleteFeedbackData = async (req, res) => {
   try {
     const feedbackData = await FeedbackData.findOneAndDelete({
       _id: req.params.id,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     if (!feedbackData) {
       return res.status(404).json({
         status: "error",
-        message: "Feedback data not found"
+        message: "Feedback data not found",
       });
     }
 
     res.status(204).json({
       status: "success",
-      data: null
+      data: null,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };

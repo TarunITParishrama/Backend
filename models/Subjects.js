@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const subjectSchema = new mongoose.Schema(
   {
-    subjectName: { type: String, required: true},
+    subjectName: { type: String, required: true },
   },
   {
     timestamps: true,
@@ -9,4 +9,3 @@ const subjectSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Subject", subjectSchema);
-

@@ -6,27 +6,36 @@ exports.createTheoryTest = async (req, res) => {
   try {
     // Validate subject details with Subject model
     const subjects = await Subject.find();
-    const subjectNames = subjects.map(sub => sub.subjectName.toLowerCase());
-    
+    const subjectNames = subjects.map((sub) => 
+      sub.subjectName ? sub.subjectName.toLowerCase() : ''
+    ).filter(name => name); // Remove empty names
+
     for (const subDetail of req.body.subjectDetails) {
-      if (!subjectNames.includes(subDetail.name.toLowerCase())) {
+      if (!subDetail.name) {
         return res.status(400).json({
           status: "error",
-          message: `Invalid subject: ${subDetail.name}`
+          message: `Subject name is required`,
+        });
+      }
+
+      const subjectName = subDetail.name.toLowerCase();
+      if (!subjectNames.includes(subjectName)) {
+        return res.status(400).json({
+          status: "error",
+          message: `Invalid subject: ${subDetail.name}`,
         });
       }
     }
 
     const theoryTest = await TheoryTest.create(req.body);
-    
     res.status(201).json({
       status: "success",
-      data: theoryTest
+      data: theoryTest,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -37,12 +46,12 @@ exports.getAllTheoryTests = async (req, res) => {
     const tests = await TheoryTest.find();
     res.status(200).json({
       status: "success",
-      data: tests
+      data: tests,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -53,12 +62,12 @@ exports.getTheoryTestsByStream = async (req, res) => {
     const tests = await TheoryTest.find({ stream: req.params.stream });
     res.status(200).json({
       status: "success",
-      data: tests
+      data: tests,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -67,17 +76,17 @@ exports.getTheoryTestsByStream = async (req, res) => {
 exports.getStudentTheoryResults = async (req, res) => {
   try {
     const tests = await TheoryTest.find({
-      "studentResults.regNumber": req.params.regNumber
+      "studentResults.regNumber": req.params.regNumber,
     });
-    
+
     res.status(200).json({
       status: "success",
-      data: tests
+      data: tests,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -89,18 +98,18 @@ exports.getTheoryTestById = async (req, res) => {
     if (!test) {
       return res.status(404).json({
         status: "error",
-        message: "Test not found"
+        message: "Test not found",
       });
     }
-    
+
     res.status(200).json({
       status: "success",
-      data: test
+      data: test,
     });
   } catch (err) {
     res.status(400).json({
       status: "error",
-      message: err.message
+      message: err.message,
     });
   }
 };

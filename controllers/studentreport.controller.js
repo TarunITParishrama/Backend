@@ -8,17 +8,28 @@ const mongoose = require("mongoose");
 exports.createOrUpdateStudentReport = async (req, res) => {
   try {
     const requiredFields = [
-      'regNumber', 'stream', 'testName', 'date',
-      'marksType', 'totalQuestions', 'correctAnswers', 'wrongAnswers',
-      'unattempted', 'accuracy', 'percentage', 'totalMarks', 'percentile', 'responses'
+      "regNumber",
+      "stream",
+      "testName",
+      "date",
+      "marksType",
+      "totalQuestions",
+      "correctAnswers",
+      "wrongAnswers",
+      "unattempted",
+      "accuracy",
+      "percentage",
+      "totalMarks",
+      "percentile",
+      "responses",
     ];
 
     // Validate required fields
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    const missingFields = requiredFields.filter((field) => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
         status: "error",
-        message: `Missing required fields: ${missingFields.join(', ')}`
+        message: `Missing required fields: ${missingFields.join(", ")}`,
       });
     }
 
@@ -27,7 +38,7 @@ exports.createOrUpdateStudentReport = async (req, res) => {
     if (isNaN(reportDate.getTime())) {
       return res.status(400).json({
         status: "error",
-        message: "Invalid date format"
+        message: "Invalid date format",
       });
     }
 
@@ -38,22 +49,22 @@ exports.createOrUpdateStudentReport = async (req, res) => {
       testName: req.body.testName,
       date: {
         $gte: new Date(reportDate.setHours(0, 0, 0, 0)),
-        $lt: new Date(reportDate.setHours(23, 59, 59, 999))
-      }
+        $lt: new Date(reportDate.setHours(23, 59, 59, 999)),
+      },
     };
 
     // Prepare update data
     const updateData = {
       ...req.body,
       date: reportDate,
-      updatedAt: new Date() // Track when this was last modified
+      updatedAt: new Date(), // Track when this was last modified
     };
 
     // Options for findOneAndUpdate
     const options = {
-      new: true,         // Return the updated document
-      upsert: true,      // Create if doesn't exist
-      runValidators: true // Run schema validations
+      new: true, // Return the updated document
+      upsert: true, // Create if doesn't exist
+      runValidators: true, // Run schema validations
     };
 
     // Perform the upsert operation
@@ -64,29 +75,30 @@ exports.createOrUpdateStudentReport = async (req, res) => {
     );
 
     // Determine if this was an update or create
-    const operationType = studentReport.createdAt === studentReport.updatedAt ? 
-      "created" : "updated";
+    const operationType =
+      studentReport.createdAt === studentReport.updatedAt
+        ? "created"
+        : "updated";
 
     res.status(200).json({
       status: "success",
       data: studentReport,
-      message: `Report ${operationType} successfully`
+      message: `Report ${operationType} successfully`,
     });
-
   } catch (err) {
     console.error("Error in createOrUpdateStudentReport:", err);
-    
+
     // Handle duplicate key errors specifically
     if (err.code === 11000) {
       return res.status(409).json({
         status: "error",
-        message: "Duplicate report detected. This report already exists."
+        message: "Duplicate report detected. This report already exists.",
       });
     }
 
     res.status(500).json({
       status: "error",
-      message: err.message || "Internal server error"
+      message: err.message || "Internal server error",
     });
   }
 };
@@ -97,12 +109,12 @@ exports.checkExistingReports = async (req, res) => {
     if (!Array.isArray(reports)) {
       return res.status(400).json({
         status: "error",
-        message: "Reports must be provided as an array"
+        message: "Reports must be provided as an array",
       });
     }
 
     const existingCount = await StudentReport.countDocuments({
-      $or: reports.map(report => {
+      $or: reports.map((report) => {
         const reportDate = new Date(report.date);
         return {
           regNumber: report.regNumber,
@@ -110,25 +122,24 @@ exports.checkExistingReports = async (req, res) => {
           stream: report.stream,
           date: {
             $gte: new Date(reportDate.setHours(0, 0, 0, 0)),
-            $lt: new Date(reportDate.setHours(23, 59, 59, 999))
-          }
+            $lt: new Date(reportDate.setHours(23, 59, 59, 999)),
+          },
         };
-      })
+      }),
     });
 
     res.status(200).json({
       status: "success",
       data: {
         existingCount,
-        totalCount: reports.length
-      }
+        totalCount: reports.length,
+      },
     });
-
   } catch (err) {
     console.error("Error checking existing reports:", err);
     res.status(500).json({
       status: "error",
-      message: err.message || "Failed to check existing reports"
+      message: err.message || "Failed to check existing reports",
     });
   }
 };
@@ -139,13 +150,13 @@ exports.bulkCreateOrUpdateStudentReports = async (req, res) => {
     if (!Array.isArray(reports)) {
       return res.status(400).json({
         status: "error",
-        message: "Reports must be provided as an array"
+        message: "Reports must be provided as an array",
       });
     }
 
     // Check for existing reports first
     const existingReports = await StudentReport.find({
-      $or: reports.map(report => {
+      $or: reports.map((report) => {
         const reportDate = new Date(report.date);
         return {
           regNumber: report.regNumber,
@@ -153,15 +164,17 @@ exports.bulkCreateOrUpdateStudentReports = async (req, res) => {
           stream: report.stream,
           date: {
             $gte: new Date(reportDate.setHours(0, 0, 0, 0)),
-            $lt: new Date(reportDate.setHours(23, 59, 59, 999))
-          }
+            $lt: new Date(reportDate.setHours(23, 59, 59, 999)),
+          },
         };
-      })
+      }),
     });
 
     const existingReportMap = new Map();
-    existingReports.forEach(report => {
-      const key = `${report.regNumber}-${report.testName}-${report.stream}-${report.date.toISOString().split('T')[0]}`;
+    existingReports.forEach((report) => {
+      const key = `${report.regNumber}-${report.testName}-${report.stream}-${
+        report.date.toISOString().split("T")[0]
+      }`;
       existingReportMap.set(key, report._id);
     });
 
@@ -169,10 +182,12 @@ exports.bulkCreateOrUpdateStudentReports = async (req, res) => {
     const toCreate = [];
     const toUpdate = [];
 
-    reports.forEach(report => {
+    reports.forEach((report) => {
       const reportDate = new Date(report.date);
-      const key = `${report.regNumber}-${report.testName}-${report.stream}-${reportDate.toISOString().split('T')[0]}`;
-      
+      const key = `${report.regNumber}-${report.testName}-${report.stream}-${
+        reportDate.toISOString().split("T")[0]
+      }`;
+
       if (existingReportMap.has(key)) {
         toUpdate.push({
           updateOne: {
@@ -181,19 +196,19 @@ exports.bulkCreateOrUpdateStudentReports = async (req, res) => {
               $set: {
                 ...report,
                 date: reportDate,
-                updatedAt: new Date()
-              }
-            }
-          }
+                updatedAt: new Date(),
+              },
+            },
+          },
         });
       } else {
         toCreate.push({
           insertOne: {
             document: {
               ...report,
-              date: reportDate
-            }
-          }
+              date: reportDate,
+            },
+          },
         });
       }
     });
@@ -213,189 +228,184 @@ exports.bulkCreateOrUpdateStudentReports = async (req, res) => {
       data: {
         created: toCreate.length,
         updated: toUpdate.length,
-        total: reports.length
+        total: reports.length,
       },
-      message: `Processed ${reports.length} reports (${toCreate.length} created, ${toUpdate.length} updated)`
+      message: `Processed ${reports.length} reports (${toCreate.length} created, ${toUpdate.length} updated)`,
     });
-
   } catch (err) {
     console.error("Bulk operation error:", err);
     res.status(500).json({
       status: "error",
-      message: err.message || "Failed to process reports"
+      message: err.message || "Failed to process reports",
     });
   }
 };
 
 // Get all StudentReports with filters (simplified)
 exports.getStudentReports = async (req, res) => {
-    try {
-        const { regNumber, testName, date, minAccuracy, maxAccuracy } = req.query;
-        const filter = {};
+  try {
+    const { regNumber, testName, date, minAccuracy, maxAccuracy } = req.query;
+    const filter = {};
 
-        // Apply basic filters
-        if (regNumber) filter.regNumber = regNumber;
-        if (testName) filter.testName = testName;
-        if (date) filter.date = new Date(date);
+    // Apply basic filters
+    if (regNumber) filter.regNumber = regNumber;
+    if (testName) filter.testName = testName;
+    if (date) filter.date = new Date(date);
 
-        // Accuracy range filter
-        if (minAccuracy || maxAccuracy) {
-            filter.accuracy = {};
-            if (minAccuracy) filter.accuracy.$gte = Number(minAccuracy);
-            if (maxAccuracy) filter.accuracy.$lte = Number(maxAccuracy);
-        }
+    // Accuracy range filter
+    if (minAccuracy || maxAccuracy) {
+      filter.accuracy = {};
+      if (minAccuracy) filter.accuracy.$gte = Number(minAccuracy);
+      if (maxAccuracy) filter.accuracy.$lte = Number(maxAccuracy);
+    }
 
-//         const page = parseInt(req.query.page) || 1;
-// const limit = parseInt(req.query.limit) || 100;
-// const skip = (page - 1) * limit;
+    //         const page = parseInt(req.query.page) || 1;
+    // const limit = parseInt(req.query.limit) || 100;
+    // const skip = (page - 1) * limit;
 
-// const total = await StudentReport.countDocuments(filter);
+    // const total = await StudentReport.countDocuments(filter);
 
-const reports = await StudentReport.find(filter)
-    .sort({ date: -1 })
+    const reports = await StudentReport.find(filter).sort({ date: -1 });
     // .skip(skip)
     // .limit(limit);
 
-res.status(200).json({
-    status: "success",
-    // total,
-    // page,
-    // totalPages: Math.ceil(total / limit),
-    data: reports
-});
-
-
-    } catch (err) {
-        res.status(500).json({
-            status: "error",
-            message: err.message
-        });
-    }
+    res.status(200).json({
+      status: "success",
+      // total,
+      // page,
+      // totalPages: Math.ceil(total / limit),
+      data: reports,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
 };
 
 //Get all StudentReports with RegNumber
 exports.getStudentReportByStudentId = async (req, res) => {
-    try {
-      const { regNumber } = req.params;
-  
-      if (!regNumber) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'Registration number is required'
-        });
-      }
-  
-      const reports = await StudentReport.find({ regNumber })
-        .select('testName date correctAnswers wrongAnswers unattempted totalMarks percentile accuracy')
-        .sort({ date: -1 }) 
-        .lean();
-  
-      if (!reports || reports.length === 0) {
-        return res.status(404).json({
-          status: 'error',
-          message: 'No reports found for this student'
-        });
-      }
-  
-      res.status(200).json({
-        status: 'success',
-        data: reports
-      });
-  
-    } catch (err) {
-      console.error('Error fetching student reports:', err);
-      res.status(500).json({
-        status: 'error',
-        message: 'Internal server error'
+  try {
+    const { regNumber } = req.params;
+
+    if (!regNumber) {
+      return res.status(400).json({
+        status: "error",
+        message: "Registration number is required",
       });
     }
+
+    const reports = await StudentReport.find({ regNumber })
+      .select(
+        "testName date correctAnswers wrongAnswers unattempted totalMarks percentile accuracy"
+      )
+      .sort({ date: -1 })
+      .lean();
+
+    if (!reports || reports.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "No reports found for this student",
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: reports,
+    });
+  } catch (err) {
+    console.error("Error fetching student reports:", err);
+    res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  }
 };
 
 // Get single report by ID
 exports.getStudentReportById = async (req, res) => {
-    try {
-        const report = await StudentReport.findById(req.params.id)
-            .populate('subject', 'subjectName')
-            .populate('chapter', 'chapterName')
-            .populate('subtopic', 'subtopicName');
+  try {
+    const report = await StudentReport.findById(req.params.id)
+      .populate("subject", "subjectName")
+      .populate("chapter", "chapterName")
+      .populate("subtopic", "subtopicName");
 
-        if (!report) {
-            return res.status(404).json({
-                status: "error",
-                message: "Report not found"
-            });
-        }
-
-        res.status(200).json({
-            status: "success",
-            data: report
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            status: "error",
-            message: err.message
-        });
+    if (!report) {
+      return res.status(404).json({
+        status: "error",
+        message: "Report not found",
+      });
     }
+
+    res.status(200).json({
+      status: "success",
+      data: report,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
 };
 
 // Update report (frontend sends updated calculations)
 exports.updateStudentReport = async (req, res) => {
-    try {
-        const updatedData = {
-            ...req.body,
-            date: req.body.date ? new Date(req.body.date) : undefined
-        };
+  try {
+    const updatedData = {
+      ...req.body,
+      date: req.body.date ? new Date(req.body.date) : undefined,
+    };
 
-        const updatedReport = await StudentReport.findByIdAndUpdate(
-            req.params.id,
-            updatedData,
-            { new: true }
-        ).populate('subject', 'subjectName')
-         .populate('chapter', 'chapterName')
-         .populate('subtopic', 'subtopicName');
+    const updatedReport = await StudentReport.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    )
+      .populate("subject", "subjectName")
+      .populate("chapter", "chapterName")
+      .populate("subtopic", "subtopicName");
 
-        if (!updatedReport) {
-            return res.status(404).json({
-                status: "error",
-                message: "Report not found"
-            });
-        }
-
-        res.status(200).json({
-            status: "success",
-            data: updatedReport
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            status: "error",
-            message: err.message
-        });
+    if (!updatedReport) {
+      return res.status(404).json({
+        status: "error",
+        message: "Report not found",
+      });
     }
+
+    res.status(200).json({
+      status: "success",
+      data: updatedReport,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
 };
 
 // Delete report
 exports.deleteStudentReport = async (req, res) => {
-    try {
-        const deletedReport = await StudentReport.findByIdAndDelete(req.params.id);
+  try {
+    const deletedReport = await StudentReport.findByIdAndDelete(req.params.id);
 
-        if (!deletedReport) {
-            return res.status(404).json({
-                status: "error",
-                message: "Report not found"
-            });
-        }
-
-        res.status(200).json({
-            status: "success",
-            message: "Report deleted successfully"
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            status: "error",
-            message: err.message
-        });
+    if (!deletedReport) {
+      return res.status(404).json({
+        status: "error",
+        message: "Report not found",
+      });
     }
+
+    res.status(200).json({
+      status: "success",
+      message: "Report deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
 };

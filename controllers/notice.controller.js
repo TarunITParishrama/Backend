@@ -1,15 +1,16 @@
-const Notice = require('../models/Notice');
-const cron = require('node-cron');
+const Notice = require("../models/Notice");
+const cron = require("node-cron");
 
 // Schedule job to activate notices at their drop time
-cron.schedule('* * * * *', async () => { // Runs every minute
+cron.schedule("* * * * *", async () => {
+  // Runs every minute
   const now = new Date();
   await Notice.updateMany(
     {
       dropDate: { $lte: now },
-      status: 'scheduled'
+      status: "scheduled",
     },
-    { status: 'active' }
+    { status: "active" }
   );
 });
 
@@ -17,23 +18,23 @@ cron.schedule('* * * * *', async () => { // Runs every minute
 exports.createNotice = async (req, res) => {
   try {
     const { subject, message, dropDate, dropTime } = req.body;
-    
+
     const notice = await Notice.create({
       subject,
       message,
       dropDate,
       dropTime,
-      createdBy: req.user.id
+      createdBy: req.user.id,
     });
 
     res.status(201).json({
-      status: 'success',
-      data: notice
+      status: "success",
+      data: notice,
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
-      message: error.message
+      status: "error",
+      message: error.message,
     });
   }
 };
@@ -41,19 +42,19 @@ exports.createNotice = async (req, res) => {
 // Get active notices (for parents)
 exports.getActiveNotices = async (req, res) => {
   try {
-    const notices = await Notice.find({ status: 'active' })
-      .sort('-dropDate')
-      .populate('createdBy', 'name role');
+    const notices = await Notice.find({ status: "active" })
+      .sort("-dropDate")
+      .populate("createdBy", "name role");
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: notices.length,
-      data: notices
+      data: notices,
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
-      message: error.message
+      status: "error",
+      message: error.message,
     });
   }
 };
@@ -62,18 +63,18 @@ exports.getActiveNotices = async (req, res) => {
 exports.getAllNotices = async (req, res) => {
   try {
     const notices = await Notice.find()
-      .sort('-createdAt')
-      .populate('createdBy', 'name role');
+      .sort("-createdAt")
+      .populate("createdBy", "name role");
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: notices.length,
-      data: notices
+      data: notices,
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
-      message: error.message
+      status: "error",
+      message: error.message,
     });
   }
 };
@@ -83,13 +84,13 @@ exports.deleteNotice = async (req, res) => {
   try {
     await Notice.findByIdAndDelete(req.params.id);
     res.status(204).json({
-      status: 'success',
-      data: null
+      status: "success",
+      data: null,
     });
   } catch (error) {
     res.status(400).json({
-      status: 'error',
-      message: error.message
+      status: "error",
+      message: error.message,
     });
   }
 };

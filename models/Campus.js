@@ -5,22 +5,22 @@ const campusSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
     type: {
       type: String,
       required: true,
-      enum: ['Boys', 'Girls', 'Co-ed']
+      enum: ["Boys", "Girls", "Co-ed"],
     },
     location: {
       type: String,
       required: true,
-      maxlength: 300
+      maxlength: 300,
     },
     isActive: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
   {
     timestamps: true,
