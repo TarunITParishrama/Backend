@@ -377,9 +377,31 @@ exports.getDetailedReportsByStudentId = async (req, res) => {
       {
         $project: {
           testName: "$_id",
-          reports: 1,
           count: 1,
           _id: 0,
+          reports: {
+            $map: {
+              input: "$reports",
+              as: "report",
+              in: {
+                regNumber: "$$report.regNumber",
+                studentName: "$$report.studentName",
+                campus: "$$report.campus",
+                section: "$$report.section",
+                stream: "$$report.stream",
+                testName: "$$report.testName",
+                date: "$$report.date",
+                subjects: "$$report.subjects",
+                totalMarks: "$$report.overallTotalMarks",
+                //fullMarks: "$$report.fullMarks",
+                percentage: "$$report.percentage",
+                percentile: "$$report.percentile",
+                rank: "$$report.rank",
+                isPresent: "$$report.isPresent",
+                remarks: "$$report.remarks",
+              },
+            },
+          },
         },
       },
     ]);
@@ -441,10 +463,10 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
     }
 
     // Fetch all students with the given campus name (string comparison)
-    const students = await Student.find({}).populate('campus');
-    const matchingStudents = students.filter(s => s.campus?.name === campus);
+    const students = await Student.find({}).populate("campus");
+    const matchingStudents = students.filter((s) => s.campus?.name === campus);
 
-    const regNumbers = matchingStudents.map(s => s.regNumber);
+    const regNumbers = matchingStudents.map((s) => s.regNumber);
 
     if (regNumbers.length === 0) {
       return res.status(404).json({
@@ -454,7 +476,9 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
     }
 
     // Fetch all reports for these students
-    const reports = await DetailedReport.find({ regNumber: { $in: regNumbers } }).sort({ date: -1 });
+    const reports = await DetailedReport.find({
+      regNumber: { $in: regNumbers },
+    }).sort({ date: -1 });
 
     res.status(200).json({
       status: "success",
