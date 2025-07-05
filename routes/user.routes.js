@@ -17,6 +17,7 @@ router.get(
   authMiddleware.restrictTo("admin", "super_admin"),
   userController.getAllUsers
 );
+router.put("/api/updatepassword/:username", userController.updatePassword);
 router.patch(
   "/api/users/:userId/approval",
   authMiddleware.restrictTo("admin", "super_admin"),

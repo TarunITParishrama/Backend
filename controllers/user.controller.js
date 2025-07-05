@@ -58,18 +58,17 @@ exports.newSignup = async function (req, res) {
 // Login with JWT token generation
 exports.newlogin = async function (req, res) {
   try {
-    const { phonenumber, password } = req.body;
+    const { phonenumber, username, password } = req.body;
+    const phone = phonenumber || username;
 
-    // 1) Check if phoneNumber and password exist
-    if (!phonenumber || !password) {
+    if (!phone || !password) {
       return res.status(400).json({
         status: "error",
         message: "Please provide phone number and password",
       });
     }
 
-    // 2) Check if user exists and password is correct
-    const user = await User.findOne({ phonenumber }).select(
+    const user = await User.findOne({ phonenumber: phone }).select(
       "+password +approval"
     );
 
@@ -180,6 +179,29 @@ exports.updateApproval = async function (req, res) {
       status: "error",
       message: "Error updating approval status",
     });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findOne({ phonenumber: username });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Current password is incorrect" });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 

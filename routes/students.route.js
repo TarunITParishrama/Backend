@@ -36,5 +36,14 @@ router.get(
   studentController.generateImageUploadURL
 );
 router.get("/api/checkregnumber/:regNumber", studentController.checkRegNumber);
+router.post("/api/check-missing-regnumbers", async (req, res) => {
+  const { regNumbers } = req.body;
+  const existing = await Student.find({
+    regNumber: { $in: regNumbers },
+  }).select("regNumber");
+  const existingSet = new Set(existing.map((s) => s.regNumber));
+  const missing = regNumbers.filter((r) => !existingSet.has(r));
+  res.json({ missing });
+});
 
 module.exports = router;

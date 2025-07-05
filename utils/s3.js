@@ -111,6 +111,45 @@ const getMimeType = (extension) => {
   }
 };
 
+// Generate upload URL for profile images
+exports.generateProfileUploadURL = async (idNumber, extension = ".jpg") => {
+  const key = `administrative/${idNumber}${extension}`;
+
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Expires: 60 * 5,
+    ContentType: getMimeType(extension),
+  };
+
+  return await s3.getSignedUrlPromise("putObject", params);
+};
+
+// View URL
+exports.generateProfileViewURL = async (idNumber, extension = ".jpg") => {
+  const key = `administrative/${idNumber}${extension}`;
+
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Expires: 60 * 60,
+  };
+
+  return await s3.getSignedUrlPromise("getObject", params);
+};
+
+// Delete
+exports.deleteProfileImage = async (idNumber, extension = ".jpg") => {
+  const key = `administrative/${idNumber}${extension}`;
+
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: key,
+  };
+
+  await s3.deleteObject(params).promise();
+};
+
 //delete file from s3
 exports.deleteFile = async (regNumber, extension = ".jpg") => {
   const key = `students/${regNumber}${extension}`;
