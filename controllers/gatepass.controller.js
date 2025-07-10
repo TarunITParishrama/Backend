@@ -287,11 +287,11 @@ exports.getGatePassesByStudent = async (req, res) => {
       .populate("campus", "name")
       .sort({ createdAt: -1 });
 
-    // Add fresh image URLs to each pass
-    const passesWithFreshURLs = await Promise.all(
+   const passesWithFreshURLs = await Promise.all(
       gatePasses.map(async (pass) => {
         const passObj = pass.toObject();
-        passObj.imageURL = await getFreshImageURL(pass.imageKey);
+        passObj.imageURL =
+          passObj.imageURL || (await getFreshImageURL(passObj.imageKey));
         return passObj;
       })
     );
