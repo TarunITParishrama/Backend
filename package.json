@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon index.js",
-    "build" : "wrangler deploy"
+    "build" : "npm run build"
   },
   "keywords": [],
   "author": "",
