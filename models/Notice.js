@@ -31,6 +31,14 @@ const noticeSchema = new mongoose.Schema({
       "Please enter a valid time in HH:MM format",
     ],
   },
+  // UPDATED FIELD: campuses replaces campus
+  campuses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Campus",
+      required: true,
+    },
+  ],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -47,8 +55,9 @@ const noticeSchema = new mongoose.Schema({
   },
 });
 
-// Index for efficient querying
+// Index for efficient querying by dropDate, status, and campus filtering
 noticeSchema.index({ dropDate: 1, status: 1 });
+noticeSchema.index({ campuses: 1, status: 1 }); // NEW: index for campus-based queries
 
 // Pre-save hook to update status
 noticeSchema.pre("save", function (next) {

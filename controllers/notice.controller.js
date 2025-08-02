@@ -17,13 +17,20 @@ cron.schedule("* * * * *", async () => {
 // Create a new notice
 exports.createNotice = async (req, res) => {
   try {
-    const { subject, message, dropDate, dropTime } = req.body;
+    const { subject, message, dropDate, dropTime, campuses } = req.body;
+    if (!Array.isArray(campuses) || campuses.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "At least one campus must be selected.",
+      });
+    }
 
     const notice = await Notice.create({
       subject,
       message,
       dropDate,
       dropTime,
+      campuses,
       createdBy: req.user.id,
     });
 
@@ -44,7 +51,8 @@ exports.getActiveNotices = async (req, res) => {
   try {
     const notices = await Notice.find({ status: "active" })
       .sort("-dropDate")
-      .populate("createdBy", "name role");
+      .populate("createdBy", "name role")
+      .populate("campuses", "name");
 
     res.status(200).json({
       status: "success",
@@ -64,7 +72,8 @@ exports.getAllNotices = async (req, res) => {
   try {
     const notices = await Notice.find()
       .sort("-createdAt")
-      .populate("createdBy", "name role");
+      .populate("createdBy", "name role")
+      .populate("campuses", "name");
 
     res.status(200).json({
       status: "success",
@@ -76,6 +85,27 @@ exports.getAllNotices = async (req, res) => {
       status: "error",
       message: error.message,
     });
+  }
+};
+
+exports.getActiveNoticesByCampus = async (req, res) => {
+  try {
+    const campusId = req.params.campusId;
+    const notices = await Notice.find({
+      status: "active",
+      campuses: campusId, // campusId present in campuses array
+    })
+      .sort("-dropDate")
+      .populate("createdBy", "name role")
+      .populate("campuses", "name");
+
+    res.status(200).json({
+      status: "success",
+      results: notices.length,
+      data: notices,
+    });
+  } catch (error) {
+    res.status(400).json({ status: "error", message: error.message });
   }
 };
 

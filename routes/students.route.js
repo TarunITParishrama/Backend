@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const studentController = require("../controllers/students.controller");
 const authController = require("../middleware/auth.middleware");
+const Student=require("../models/Students")
 //const upload = require('../utils/uploadStudentImage')
 
 // Student CRUD routes

@@ -291,7 +291,8 @@ exports.getGatePassesByStudent = async (req, res) => {
     const passesWithFreshURLs = await Promise.all(
       gatePasses.map(async (pass) => {
         const passObj = pass.toObject();
-        passObj.imageURL = await getFreshImageURL(pass.imageKey);
+        passObj.imageURL =
+          passObj.imageURL || (await getFreshImageURL(passObj.imageKey));
         return passObj;
       })
     );
