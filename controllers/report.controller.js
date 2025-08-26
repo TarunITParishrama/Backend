@@ -249,6 +249,45 @@ exports.getReportById = async (req, res) => {
   }
 };
 
+// List Reports (latest-first, paginated)
+exports.listReports = async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 30, 1), 100); // default 30
+    const stream = req.query.stream; // optional: "LongTerm" | "PUC"
+    const sort = (req.query.sort || "desc").toLowerCase() === "asc" ? 1 : -1;
+
+    const filter = {};
+    if (stream) filter.stream = stream;
+
+    const total = await Report.countDocuments(filter);
+    const totalPages = Math.max(Math.ceil(total / limit), 1);
+    const skip = (page - 1) * limit;
+
+    const reports = await Report.find(filter)
+      .sort({ date: sort, _id: sort }) // stable sort
+      .skip(skip)
+      .limit(limit)
+      .select("_id stream testName marksType date totalQuestions")
+      .lean();
+
+    return res.status(200).json({
+      status: "success",
+      page,
+      limit,
+      total,
+      totalPages,
+      data: reports,
+    });
+  } catch (err) {
+    console.error("Error in listReports:", err);
+    return res.status(500).json({
+      status: "error",
+      message: err.message || "Failed to list reports",
+    });
+  }
+};
+
 // Update Report
 exports.updateReportById = async function (req, res) {
   try {

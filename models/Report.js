@@ -36,5 +36,7 @@ ReportSchema.index({ testName: 1 });
 ReportSchema.index({ date: 1, stream: 1 });
 ReportSchema.index({ stream: 1 });
 ReportSchema.index({ testName: 1, date: 1, stream: 1 });
+ReportSchema.index({ stream: 1, date: -1 });
+ReportSchema.index({ date: -1 });
 
 module.exports = mongoose.model("Report", ReportSchema);

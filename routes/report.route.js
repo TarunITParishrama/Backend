@@ -7,6 +7,7 @@ router.post("/api/createreport", reportController.createReport);
 
 router.get("/api/getreportbank", reportController.getReportBank);
 router.get("/api/getallreports", reportController.getAllReportBank);
+router.get("/api/reports", reportController.listReports);
 router.get("/api/getreport/:id", reportController.getReportById);
 
 router.put("/api/updatereport/:reportId", reportController.updateReportById);
