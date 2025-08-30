@@ -447,14 +447,33 @@ exports.searchStudents = async (req, res) => {
         .json({ status: "error", message: "Search query required" });
     }
 
+    // Check if the query looks like a 10-digit mobile number
+    const isMobileQuery = /^\d{10}$/.test(query);
+
+    let searchConditions = [
+      { studentName: { $regex: query, $options: "i" } },
+      { regNumber: { $regex: `^${query}`, $options: "i" } },
+    ];
+
+    if (isMobileQuery) {
+      // Search by fatherMobile or contact if it's a mobile number
+      searchConditions.push({ fatherMobile: query });
+      searchConditions.push({ contact: query });
+    }
+
     const students = await Student.find({
-      $or: [
-        { studentName: { $regex: query, $options: "i" } },
-        { regNumber: { $regex: `^${query}`, $options: "i" } },
-      ],
+      $or: searchConditions,
     })
       .populate("campus", "name")
       .limit(10);
+
+    if (students.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+        message: "No students found matching your search",
+      });
+    }
 
     res.status(200).json({ status: "success", data: students });
   } catch (error) {
