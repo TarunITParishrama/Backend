@@ -17,11 +17,14 @@ router.get(
 router.put("/api/updatestudent/:id", studentController.updateStudent);
 router.get("/api/searchstudents", studentController.searchStudents);
 router.get("/api/checkregnumber/:regNumber", studentController.checkRegNumber);
-router.delete("/api/deletestudent/:id", studentController.deleteStudent);
+router.delete("/api/deletestudent/:id",authController.protect, studentController.deleteStudent);
 router.delete(
   "/api/delete-student-image/:regNumber",
   studentController.deleteStudentImage
 );
+router.get('/api/deleted-students', authController.protect, authController.restrictTo('admin','super_admin'), studentController.getDeletedStudents);
+router.get('/api/deleted-students/:id', authController.protect, authController.restrictTo('admin','super_admin'), studentController.getDeletedStudentById);
+router.get('/api/deleted-student-by-reg/:regNumber', authController.protect, studentController.getDeletedStudentByReg);
 router.get(
   "/api/getstudentsbycampus/:campusId",
   studentController.getStudentsByCampus
