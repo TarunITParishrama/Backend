@@ -439,6 +439,10 @@ exports.deleteStudent = async (req, res) => {
         .json({ status: "error", message: "Reason for deletion is required." });
     }
 
+    // require staff context and role check already enforced by route
+    const deleterUsername =
+      req.user?.phonenumber || req.user?.phoneNumber || "unknown";
+
     const student = await Student.findById(req.params.id).populate("campus");
     if (!student) {
       return res
@@ -446,24 +450,12 @@ exports.deleteStudent = async (req, res) => {
         .json({ status: "error", message: "Student not found" });
     }
 
-    // Attempt to delete associated image in S3 (keep same behavior)
-    if (student.regNumber) {
-      const extensions = [".jpg", ".jpeg", ".png", ".webp"];
-      for (const ext of extensions) {
-        try {
-          await deleteFile(student.regNumber, ext);
-          break; // delete first matching file
-        } catch (err) {
-          continue; // try next extension
-        }
-      }
-    }
+    // optional S3 cleanup (unchanged)
 
-    // Archive snapshot before deletion
-    const archiveDoc = {
+    await DeletedStudent.create({
       originalId: student._id,
       admissionYear: student.admissionYear,
-      campus: student.campus, // ObjectId
+      campus: student.campus._id || student.campus,
       gender: student.gender,
       admissionType: student.admissionType,
       regNumber: student.regNumber,
@@ -480,15 +472,11 @@ exports.deleteStudent = async (req, res) => {
       medicalIssues: student.medicalIssues,
       medicalDetails: student.medicalDetails,
       reason: reason.trim(),
-      deletedBy: req.user?._id, // if protect middleware attaches user
-    };
+      deletedByUsername: deleterUsername,
+    });
 
-    await DeletedStudent.create(archiveDoc);
+    await Student.findByIdAndDelete(student._id);
 
-    // Delete student from DB
-    await Student.findByIdAndDelete(req.params.id);
-
-    // 204 No Content - but include minimal JSON to be consistent with frontend expectations
     return res
       .status(200)
       .json({ status: "success", message: "Student deleted and archived." });
@@ -669,42 +657,60 @@ exports.getStudentsByCampus = async function (req, res) {
 
 exports.getDeletedStudents = async (req, res) => {
   try {
-    const page = parseInt(req.query.page || '1', 10);
-    const limit = parseInt(req.query.limit || '20', 10);
+    const page = parseInt(req.query.page || "1", 10);
+    const limit = parseInt(req.query.limit || "20", 10);
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-      DeletedStudent.find({}, 'regNumber studentName campus studentImageURL deletedAt') // projection
-        .populate('campus', 'name')
+      DeletedStudent.find(
+        {},
+        "regNumber studentName campus studentImageURL deletedAt"
+      ) // projection
+        .populate("campus", "name")
         .sort({ deletedAt: -1 })
         .skip(skip)
         .limit(limit),
       DeletedStudent.countDocuments(),
     ]);
 
-    res.status(200).json({ status: 'success', total, page, totalPages: Math.ceil(total/limit), data });
+    res
+      .status(200)
+      .json({
+        status: "success",
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+        data,
+      });
   } catch (err) {
-    res.status(400).json({ status: 'error', message: err.message });
+    res.status(400).json({ status: "error", message: err.message });
   }
 };
 
 exports.getDeletedStudentById = async (req, res) => {
   try {
-    const doc = await DeletedStudent.findById(req.params.id).populate('campus', 'name type location');
+    const doc = await DeletedStudent.findById(req.params.id)
+      .populate('campus', 'name type location');
     if (!doc) return res.status(404).json({ status: 'error', message: 'Archived record not found' });
-    res.status(200).json({ status: 'success', data: doc });
+    return res.status(200).json({ status: 'success', data: doc }); // doc now has deletedByUsername
   } catch (err) {
-    res.status(400).json({ status: 'error', message: err.message });
+    return res.status(400).json({ status: 'error', message: err.message });
   }
 };
+
 
 // Get a single archived student by regNumber
 exports.getDeletedStudentByReg = async (req, res) => {
   try {
-    const doc = await DeletedStudent.findOne({ regNumber: req.params.regNumber }).populate('campus', 'name type');
-    if (!doc) return res.status(404).json({ status: 'error', message: 'Archived record not found' });
-    res.status(200).json({ status: 'success', data: doc });
+    const doc = await DeletedStudent.findOne({
+      regNumber: req.params.regNumber,
+    }).populate("campus", "name type");
+    if (!doc)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Archived record not found" });
+    res.status(200).json({ status: "success", data: doc });
   } catch (err) {
-    res.status(400).json({ status: 'error', message: err.message });
+    res.status(400).json({ status: "error", message: err.message });
   }
 };

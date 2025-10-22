@@ -30,6 +30,8 @@ router.get(
   detailedReportController.loadDetailedReportsByCampus
 );
 
+router.get("/api/getsections", detailedReportController.getSectionsByCampus);
+
 router.put(
   "/api/detailedreports/:id",
   detailedReportController.updateDetailedReport

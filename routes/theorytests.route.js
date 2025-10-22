@@ -26,4 +26,7 @@ router.get(
   theoryTestController.getTheoryTestById
 );
 
+router.get("/api/gettheorybycampus", theoryTestController.getTheoryTestsByCampusSection);
+router.get("/api/gettheoryrowsbycampus", theoryTestController.getTheoryResultsByCampusSection);
+
 module.exports = router;

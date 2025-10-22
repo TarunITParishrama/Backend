@@ -451,9 +451,10 @@ exports.getDetailedReportById = async (req, res) => {
 };
 
 //for downloading detailedreports campus wise
+// for downloading detailedreports campus-wise (optionally filtered by section)
 exports.loadDetailedReportsByCampus = async (req, res) => {
   try {
-    const { campus } = req.query;
+    const { campus, section } = req.query;
 
     if (!campus) {
       return res.status(400).json({
@@ -462,16 +463,24 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
       });
     }
 
-    // Fetch all students with the given campus name (string comparison)
+    // Fetch all students and populate campus to match by name
     const students = await Student.find({}).populate("campus");
-    const matchingStudents = students.filter((s) => s.campus?.name === campus);
+    let matchingStudents = students.filter((s) => s.campus?.name === campus);
+
+    if (section) {
+      matchingStudents = matchingStudents.filter(
+        (s) => (s.section || "").trim() === section.trim()
+      );
+    }
 
     const regNumbers = matchingStudents.map((s) => s.regNumber);
 
-    if (regNumbers.length === 0) {
+    if (!regNumbers.length) {
       return res.status(404).json({
         status: "error",
-        message: "No students found for this campus.",
+        message: section
+          ? "No students found for this campus and section."
+          : "No students found for this campus.",
       });
     }
 
@@ -482,6 +491,8 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
 
     res.status(200).json({
       status: "success",
+      campus,
+      section: section || null,
       totalStudents: regNumbers.length,
       totalReports: reports.length,
       data: reports,
@@ -494,6 +505,55 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
     });
   }
 };
+
+// Get sections for a campus
+exports.getSectionsByCampus = async (req, res) => {
+  try {
+    const { campus } = req.query;
+    if (!campus) {
+      return res.status(400).json({
+        status: "error",
+        message: "Campus name is required as a query parameter.",
+      });
+    }
+
+    // Load students with campus populated, then filter by campus name
+    const students = await Student.find({}).populate("campus");
+    const matching = students.filter((s) => s.campus?.name === campus);
+
+    if (!matching.length) {
+      return res.status(404).json({
+        status: "error",
+        message: "No students found for this campus.",
+        sections: [],
+      });
+    }
+
+    // Collect distinct non-empty sections
+    const sectionsSet = new Set(
+      matching
+        .map((s) => (s.section || "").trim())
+        .filter((x) => x && x.length > 0)
+    );
+    const sections = Array.from(sectionsSet).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+
+    res.status(200).json({
+      status: "success",
+      campus,
+      count: sections.length,
+      sections,
+    });
+  } catch (err) {
+    console.error("Error fetching sections by campus:", err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+};
+
 
 // Update report
 exports.updateDetailedReport = async (req, res) => {
