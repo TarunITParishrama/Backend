@@ -39,6 +39,7 @@ router.get(
   "/api/generate-image-upload-url/:regNumber/:fileExtension",
   studentController.generateImageUploadURL
 );
+router.get("/api/byreg/:regNumber", studentController.getByReg);
 router.get("/api/checkregnumber/:regNumber", studentController.checkRegNumber);
 router.post("/api/check-missing-regnumbers", async (req, res) => {
   const { regNumbers } = req.body;

@@ -698,6 +698,15 @@ exports.getDeletedStudentById = async (req, res) => {
   }
 };
 
+exports.getByReg = async (req, res) => {
+  try {
+    const s = await Student.findOne({ regNumber: req.params.regNumber });
+    if (!s) return res.status(404).json({ status: "error", message: "Student not found" });
+    return res.status(200).json({ status: "success", data: s });
+  } catch (e) {
+    return res.status(500).json({ status: "error", message: e.message });
+  }
+};
 
 // Get a single archived student by regNumber
 exports.getDeletedStudentByReg = async (req, res) => {
