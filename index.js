@@ -2,10 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
-const {updateNotices} = require("./controllers/noticeController.js");
-// import cron from "node-cron";
-// import { updateNotices } from "./controllers/noticeController.js";
-// import mongoose from "mongoose";
+const { updateNotices } = require("./controllers/noticeController.js");
 const cors = require("cors");
 
 const app = express();
@@ -17,19 +14,22 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => console.log("Connected to MongoDB"))
-  cron.schedule("0 * * * *", async () => { // runs hourly
-    try {
-      await updateNotices();
-      console.log("✅ Notices updated successfully");
-    } catch (err) {
-      console.error("[CRON ERROR]", err);
-    }
-  });
-)
-.catch(err => console.error("❌ MongoDB connection failed:", err));
+  .then(() => {
+    console.log("✅ Connected to MongoDB");
 
+    // Start the cron job only after MongoDB connection is ready
+    cron.schedule("0 * * * *", async () => { // runs hourly
+      try {
+        await updateNotices();
+        console.log("✅ Notices updated successfully");
+      } catch (err) {
+        console.error("[CRON ERROR]", err);
+      }
+    });
+  })
+  .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
+// -------------------- ROUTES --------------------
 const SubjectRoute = require("./routes/subject.route");
 app.use("/", SubjectRoute);
 
@@ -58,7 +58,6 @@ const GatePassRoutes = require("./routes/gatepass.route");
 app.use("/", GatePassRoutes);
 
 const NoticeRoutes = require("./routes/notice.route");
-require("./controllers/notice.controller");
 app.use("/", NoticeRoutes);
 
 const TestResultsRoutes = require("./routes/testresults.route");
@@ -85,12 +84,13 @@ app.use("/", DetailedReportRoute);
 const FeedbackRoute = require("./routes/feedback.route");
 app.use("/", FeedbackRoute);
 
-const ProfileRoute = require("./routes/profile.route")
+const ProfileRoute = require("./routes/profile.route");
 app.use("/", ProfileRoute);
 
 const ParentFeedbackRoute = require("./routes/parentfeedback.route");
 app.use("/", ParentFeedbackRoute);
 
+// -------------------- SERVER START --------------------
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`🚀 Server is running on http://localhost:${port}`);
 });
