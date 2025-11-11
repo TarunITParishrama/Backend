@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
+import cron from "node-cron";
+import { updateNotices } from "./controllers/noticeController.js";
+import mongoose from "mongoose";
 const cors = require("cors");
 
 const app = express();
@@ -13,7 +15,17 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("Failed to connect to MongoDB:", err));
+  cron.schedule("0 * * * *", async () => { // runs hourly
+    try {
+      await updateNotices();
+      console.log("✅ Notices updated successfully");
+    } catch (err) {
+      console.error("[CRON ERROR]", err);
+    }
+  });
+})
+.catch(err => console.error("❌ MongoDB connection failed:", err));
+
 
 const SubjectRoute = require("./routes/subject.route");
 app.use("/", SubjectRoute);
