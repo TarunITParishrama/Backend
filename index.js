@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
-const { updateNotices } = require("./controllers/noticeController.js");
+const { updateNotices } = require("./controllers/notice.controller.js");
 const cors = require("cors");
 
 const app = express();
