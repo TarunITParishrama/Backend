@@ -1,8 +1,11 @@
 require("dotenv").config();
 const express = require("express");
-import cron from "node-cron";
-import { updateNotices } from "./controllers/noticeController.js";
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+const cron = require("node-cron");
+const {updateNotices} = require("./controllers/noticeController.js");
+// import cron from "node-cron";
+// import { updateNotices } from "./controllers/noticeController.js";
+// import mongoose from "mongoose";
 const cors = require("cors");
 
 const app = express();
