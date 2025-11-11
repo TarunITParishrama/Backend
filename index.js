@@ -26,7 +26,7 @@ mongoose
       console.error("[CRON ERROR]", err);
     }
   });
-})
+)
 .catch(err => console.error("❌ MongoDB connection failed:", err));
 
 
