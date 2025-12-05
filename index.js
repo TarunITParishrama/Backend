@@ -76,6 +76,9 @@ app.use("/", ProfileRoute);
 const ParentFeedbackRoute = require("./routes/parentfeedback.route");
 app.use("/", ParentFeedbackRoute);
 
+const hostelFoodRoutes = require("./routes/hostelfood.route");
+app.use(hostelFoodRoutes);
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
