@@ -14,7 +14,7 @@ const studentResultSchema = new mongoose.Schema({
 
 const subjectDetailSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  maxMarks: { type: Number, required: true, max: 50 },
+  maxMarks: { type: Number, required: true, max: 100 },
 });
 
 const theoryTestSchema = new mongoose.Schema(
