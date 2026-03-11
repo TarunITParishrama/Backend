@@ -23,4 +23,7 @@ router.delete(
   reportController.deleteReportBankById
 );
 
+router.post("/api/delete-by-testname", reportController.deleteReportsByTestName);
+
+
 module.exports = router;

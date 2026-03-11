@@ -392,3 +392,37 @@ exports.deleteReportBankById = async function (req, res) {
     res.status(400).json({ status: "error", message: err.message });
   }
 };
+
+// Add this to your controller file (after existing deleteReportById)
+exports.deleteReportsByTestName = async function(req, res) {
+  try {
+    const { testName } = req.body; // Use body for safety, not query params
+    
+    if (!testName) {
+      return res.status(400).json({ status: 'error', message: 'testName is required' });
+    }
+
+    // Find all reports with this testName
+    const reports = await Report.find({ testName }).select('_id');
+    
+    if (reports.length === 0) {
+      return res.status(404).json({ status: 'error', message: `No reports found for testName: ${testName}` });
+    }
+
+    const reportIds = reports.map(r => r._id);
+
+    // Delete all associated reportbanks entries first (cascade delete)
+    await ReportBank.deleteMany({ reportRef: { $in: reportIds } });
+
+    // Now delete the reports
+    await Report.deleteMany({ testName });
+
+    res.status(200).json({ 
+      status: 'success', 
+      message: `Deleted ${reports.length} reports and all associated reportbanks entries for ${testName}` 
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};
+

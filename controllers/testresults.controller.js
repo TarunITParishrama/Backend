@@ -248,3 +248,44 @@ exports.getAllTestNames = async (req, res) => {
     });
   }
 };
+
+exports.deleteTestResultsByFilters = async (req, res) => {
+  try {
+    const { testName, stream, selectedCampus, selectedSection, selectedAdmissionYear, regNumbers } = req.body;
+
+    // Base filter
+    const filter = {
+      testName,
+      stream
+    };
+
+    // CRITICAL: Filter by regNumbers from frontend filtered list
+    if (regNumbers && regNumbers.length > 0) {
+      filter.regNumber = { $in: regNumbers };
+    }
+
+    // Count first
+    const deleteCount = await TestResults.countDocuments(filter);
+    
+    if (deleteCount === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: `No test results found matching your filters` 
+      });
+    }
+
+    // Delete matching records
+    const result = await TestResults.deleteMany(filter);
+
+    res.status(200).json({
+      status: 'success',
+      message: `Deleted ${result.deletedCount} filtered test results`,
+      deletedCount: result.deletedCount,
+      regNumbersCount: regNumbers?.length || 0
+    });
+
+  } catch (err) {
+    console.error('Delete error:', err);
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+};

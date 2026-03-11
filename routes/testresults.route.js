@@ -41,4 +41,11 @@ router.get(
   testResultsController.getAllTestNames
 );
 
+router.delete(
+  "/api/deletetestresultsbyfilters",
+  authMiddleware.protect,
+  testResultsController.deleteTestResultsByFilters
+);
+
+
 module.exports = router;
