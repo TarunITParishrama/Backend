@@ -88,6 +88,10 @@ DetailedReportSchema.index({ regNumber: 1, stream: 1 });
 DetailedReportSchema.index({ testName: 1, stream: 1 });
 DetailedReportSchema.index({ regNumber: 1, testName: 1, stream: 1 });
 DetailedReportSchema.index({ date: 1, stream: 1 });
+DetailedReportSchema.index({ campus: 1});
+DetailedReportSchema.index({ section: 1 });
+DetailedReportSchema.index({ testName: 1 });
+DetailedReportSchema.index({ regNumber: 1 });
 
 // Pre-save hook to set remarks based on percentile
 DetailedReportSchema.pre("save", function (next) {
