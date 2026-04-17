@@ -29,6 +29,7 @@ router.get(
   "/api/loaddetailedreports",
   detailedReportController.loadDetailedReportsByCampus
 );
+router.get("/api/download-bulk-excel", detailedReportController.downloadBulkExcel);
 
 router.get("/api/getsections", detailedReportController.getSectionsByCampus);
 

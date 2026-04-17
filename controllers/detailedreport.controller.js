@@ -1,5 +1,7 @@
 const DetailedReport = require("../models/DetailedReports");
 const Student = require("../models/Students");
+const Campus = require("../models/Campus");
+const XLSX = require("xlsx");
 
 // Create DetailedReport with stream validation
 exports.createDetailedReport = async (req, res) => {
@@ -23,7 +25,7 @@ exports.createDetailedReport = async (req, res) => {
     ];
 
     const missingFields = requiredFields.filter(
-      (field) => !req.body[field] && req.body[field] !== 0
+      (field) => !req.body[field] && req.body[field] !== 0,
     );
 
     if (missingFields.length > 0) {
@@ -126,7 +128,7 @@ exports.bulkUploadDetailedReports = async (req, res) => {
       // Validate stream
       if (report.stream && !["LongTerm", "PUC"].includes(report.stream)) {
         errors.push(
-          `Invalid stream value: ${report.stream}. Must be 'LongTerm' or 'PUC'`
+          `Invalid stream value: ${report.stream}. Must be 'LongTerm' or 'PUC'`,
         );
       }
 
@@ -256,7 +258,7 @@ exports.bulkUploadDetailedReports = async (req, res) => {
     ];
     await Student.updateMany(
       { regNumber: { $in: uniqueStudents } },
-      { $set: { hasReports: true } }
+      { $set: { hasReports: true } },
     );
 
     res.status(201).json({
@@ -451,54 +453,199 @@ exports.getDetailedReportById = async (req, res) => {
 };
 
 //for downloading detailedreports campus wise
-// for downloading detailedreports campus-wise (optionally filtered by section)
 exports.loadDetailedReportsByCampus = async (req, res) => {
   try {
-    const { campus, section } = req.query;
+    let { campus, section } = req.query;
 
     if (!campus) {
       return res.status(400).json({
         status: "error",
-        message: "Campus name is required as a query parameter.",
+        message: "Campus is required",
       });
     }
 
-    // Fetch all students and populate campus to match by name
-    const students = await Student.find({}).populate("campus");
-    let matchingStudents = students.filter((s) => s.campus?.name === campus);
+    const isAllCampus = campus.toLowerCase() === "all";
+    const isAllSection = section?.toLowerCase() === "all";
 
-    if (section) {
-      matchingStudents = matchingStudents.filter(
-        (s) => (s.section || "").trim() === section.trim()
-      );
+    let filter = {};
+
+    // ✅ Campus filter
+    if (!isAllCampus) {
+      const campusList = campus.split(",");
+      filter.campus = { $in: campusList };
     }
 
-    const regNumbers = matchingStudents.map((s) => s.regNumber);
+    // ✅ Section filter
+    if (section && !isAllSection) {
+      const sectionList = section.split(",");
+      filter.section = { $in: sectionList };
+    }
 
-    if (!regNumbers.length) {
+    const reports = await DetailedReport.find(filter)
+      .sort({ date: -1 })
+      .lean();
+
+    if (!reports.length) {
       return res.status(404).json({
         status: "error",
-        message: section
-          ? "No students found for this campus and section."
-          : "No students found for this campus.",
+        message: "No reports found",
       });
     }
 
-    // Fetch all reports for these students
-    const reports = await DetailedReport.find({
-      regNumber: { $in: regNumbers },
-    }).sort({ date: -1 });
+    const uniqueStudents = new Set(reports.map(r => r.regNumber));
 
     res.status(200).json({
       status: "success",
       campus,
       section: section || null,
-      totalStudents: regNumbers.length,
+      totalStudents: uniqueStudents.size,
       totalReports: reports.length,
       data: reports,
     });
+
   } catch (err) {
-    console.error("Error loading detailed reports:", err);
+    console.error("Error:", err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+};
+
+exports.downloadBulkExcel = async (req, res) => {
+  try {
+    const { campus, section, test } = req.query;
+
+    const isAllCampus = campus?.toLowerCase() === "all";
+    const isAllSection = section?.toLowerCase() === "all";
+
+    let filter = {};
+
+    // ✅ Campus filter
+    if (!isAllCampus) {
+      const campusList = campus.split(",");
+      filter.campus = { $in: campusList };
+    }
+
+    // ✅ Section filter
+    if (section && !isAllSection) {
+      const sectionList = section.split(",");
+      filter.section = { $in: sectionList };
+    }
+
+    // ✅ Test filter
+    if (test) {
+      filter.testName = { $regex: `^${test}`, $options: "i" };
+    }
+
+    const reports = await DetailedReport.find(filter).lean();
+
+    if (!reports.length) {
+      return res.status(404).json({
+        status: "error",
+        message: "No data found",
+      });
+    }
+
+    // ✅ Unique test names
+    const testNames = [...new Set(reports.map(r => r.testName))];
+
+    // ✅ Unique subjects
+    const allSubjects = Array.from(
+      new Set(
+        reports.flatMap(r =>
+          r.subjects?.map(s => s.subjectName || s.name) || []
+        )
+      )
+    );
+
+    // ✅ Headers
+    const headers = ["RegNumber", "StudentName", "Campus", "Section"];
+
+    testNames.forEach((test) => {
+      allSubjects.forEach((sub) => headers.push(`${test}_${sub}`));
+      headers.push(`${test}_Total`);
+    });
+
+    // ✅ Create lookup map (VERY IMPORTANT for performance)
+    const reportMap = new Map();
+    reports.forEach((r) => {
+      reportMap.set(`${r.regNumber}_${r.testName}`, r);
+    });
+
+    // ✅ Unique students
+    const students = [
+      ...new Map(
+        reports.map((r) => [
+          r.regNumber,
+          {
+            regNumber: r.regNumber,
+            studentName: r.studentName,
+            campus: r.campus,
+            section: r.section,
+          },
+        ])
+      ).values(),
+    ];
+
+    // ✅ Build rows
+    const rows = students.map((student) => {
+      const row = [
+        student.regNumber,
+        student.studentName,
+        student.campus,
+        student.section,
+      ];
+
+      testNames.forEach((test) => {
+        const report = reportMap.get(
+          `${student.regNumber}_${test}`
+        );
+
+        if (report) {
+          allSubjects.forEach((sub) => {
+            const found = report.subjects?.find(
+              (s) =>
+                (s.subjectName || s.name)?.toLowerCase() ===
+                sub.toLowerCase()
+            );
+            row.push(found ? found.scored : "A");
+          });
+
+          row.push(report.overallTotalMarks ?? 0);
+        } else {
+          allSubjects.forEach(() => row.push("A"));
+          row.push(0);
+        }
+      });
+
+      return row;
+    });
+
+    // ✅ Generate Excel
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reports");
+
+    const buffer = XLSX.write(wb, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+
+    // ✅ Send file
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=BulkReports.xlsx"
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.send(buffer);
+
+  } catch (err) {
+    console.error("Excel Error:", err);
     res.status(500).json({
       status: "error",
       message: err.message,
@@ -533,10 +680,10 @@ exports.getSectionsByCampus = async (req, res) => {
     const sectionsSet = new Set(
       matching
         .map((s) => (s.section || "").trim())
-        .filter((x) => x && x.length > 0)
+        .filter((x) => x && x.length > 0),
     );
     const sections = Array.from(sectionsSet).sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true })
+      a.localeCompare(b, undefined, { numeric: true }),
     );
 
     res.status(200).json({
@@ -554,7 +701,6 @@ exports.getSectionsByCampus = async (req, res) => {
   }
 };
 
-
 // Update report
 exports.updateDetailedReport = async (req, res) => {
   try {
@@ -564,7 +710,7 @@ exports.updateDetailedReport = async (req, res) => {
     const report = await DetailedReport.findByIdAndUpdate(
       req.params.id,
       updates,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!report) {
@@ -700,7 +846,7 @@ exports.markAbsentStudents = async (req, res) => {
 
     // Find absent students (in student collection but not in reports)
     const absentStudents = allStudents.filter(
-      (student) => !presentRegNumbers.includes(student.regNumber)
+      (student) => !presentRegNumbers.includes(student.regNumber),
     );
 
     // Prepare absent records
@@ -734,7 +880,7 @@ exports.markAbsentStudents = async (req, res) => {
 
       const existingRegNumbers = existingAbsent.map((r) => r.regNumber);
       const newAbsentRecords = absentRecords.filter(
-        (r) => !existingRegNumbers.includes(r.regNumber)
+        (r) => !existingRegNumbers.includes(r.regNumber),
       );
 
       if (newAbsentRecords.length > 0) {
