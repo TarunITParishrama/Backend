@@ -481,9 +481,11 @@ exports.loadDetailedReportsByCampus = async (req, res) => {
       filter.section = { $in: sectionList };
     }
 
-    const reports = await DetailedReport.find(filter)
+const reports = await DetailedReport.find(filter)
+      .select("regNumber studentName campus section testName subjects overallTotalMarks")
       .sort({ date: -1 })
-      .lean();
+      .lean()
+      .cursor();
 
     if (!reports.length) {
       return res.status(404).json({
