@@ -485,7 +485,6 @@ const reports = await DetailedReport.find(filter)
       .select("regNumber studentName campus section testName subjects overallTotalMarks")
       .sort({ date: -1 })
       .lean()
-      .cursor();
 
     if (!reports.length) {
       return res.status(404).json({
