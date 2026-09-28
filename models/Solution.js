@@ -29,4 +29,5 @@ SolutionSchema.index({ date: 1, stream: 1 });
 SolutionSchema.index({ stream: 1 });
 SolutionSchema.index({ testName: 1, date: 1, stream: 1 });
 
+
 module.exports = mongoose.model("Solution", SolutionSchema);

@@ -81,62 +81,175 @@ exports.createSolution = async function (req, res) {
 };
 
 // Get SolutionBank entries with filters
-exports.getSolutionBank = async function (req, res) {
+// Get unique test names
+exports.getSolutionTestNames = async function (req, res) {
   try {
-    const { stream, questionType, testName, date } = req.query;
+    const { stream } = req.query;
+
     const filter = {};
 
-    // Add filters
-    if (stream) filter.stream = stream;
-    if (questionType) filter.questionType = questionType;
-    if (testName) filter.testName = testName;
-    if (date) filter.date = new Date(date);
+    if (stream) {
+      filter.stream = stream;
+    }
 
-    const solutions = await Solution.find(filter);
-    if (solutions.length === 0) {
+    const testNames = await Solution.distinct("testName", filter);
+
+    testNames.sort((a, b) =>
+      a.localeCompare(b, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+
+    return res.status(200).json({
+      status: "success",
+      data: testNames,
+    });
+  } catch (err) {
+    console.error("Error in getSolutionTestNames:", err);
+
+    return res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+};
+exports.getSolutionBank = async function (req, res) {
+  try {
+    const {
+      stream,
+      questionType,
+      testName,
+      date,
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    // ---------------------------------------
+    // 1. Build Solution filter
+    // ---------------------------------------
+    const filter = {};
+
+    if (stream) {
+      filter.stream = stream;
+    }
+
+    if (questionType) {
+      filter.questionType = questionType;
+    }
+
+    if (testName) {
+      filter.testName = testName;
+    }
+
+    // ---------------------------------------
+    // 2. Date filter
+    // ---------------------------------------
+    if (date) {
+      const selectedDate = new Date(date);
+
+      if (isNaN(selectedDate.getTime())) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid date format",
+        });
+      }
+
+      // Match the complete calendar day
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filter.date = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+
+    // ---------------------------------------
+    // 3. Find the MOST RECENT Solution
+    //    among the matching filters
+    // ---------------------------------------
+    const latestSolution = await Solution.findOne(filter).sort({
+      updatedAt: -1,
+      createdAt: -1,
+    });
+
+    if (!latestSolution) {
       return res.status(404).json({
         status: "error",
-        message: "No solutions found with these filters",
+        message: "No solutions found with the provided filters",
       });
     }
-    const page = parseInt(req.query.page) || 1;
-    // const limit = parseInt(req.query.limit) || 100;
-    // const skip = (page - 1) * limit;
-    const total = await SolutionBank.countDocuments({
-      solutionRef: { $in: solutions.map((s) => s._id) },
-    });
-    const filteredSolutionIds = solutions.map((s) => s._id);
 
+    // ---------------------------------------
+    // 4. Pagination
+    // ---------------------------------------
+    const currentPage = Math.max(parseInt(page) || 1, 1);
+    const pageLimit = Math.max(parseInt(limit) || 50, 1);
+
+    const skip = (currentPage - 1) * pageLimit;
+
+    // ---------------------------------------
+    // 5. Count SolutionBank entries
+    //    belonging ONLY to latest Solution
+    // ---------------------------------------
+    const total = await SolutionBank.countDocuments({
+      solutionRef: latestSolution._id,
+    });
+
+    // ---------------------------------------
+    // 6. Get SolutionBank for latest Solution
+    // ---------------------------------------
     const solutionBankEntries = await SolutionBank.find({
-      solutionRef: { $in: filteredSolutionIds },
+      solutionRef: latestSolution._id,
     })
       .populate("solutionRef")
-      // .skip(skip)
-      // .limit(limit)
       .select(
         `
-solutionRef
-questionNumber
-questionText
-questionImages
-correctOptions
-correctSolution
-isGrace
-date
-`,
-      );
-    res.status(200).json({
+        solutionRef
+        questionNumber
+        questionText
+        questionImages
+        correctOptions
+        correctSolution
+        isGrace
+        date
+      `,
+      )
+      .sort({ questionNumber: 1 })
+      .skip(skip)
+      .limit(pageLimit);
+
+    // ---------------------------------------
+    // 7. Pagination information
+    // ---------------------------------------
+    const totalPages = Math.ceil(total / pageLimit);
+
+    return res.status(200).json({
       status: "success",
+
+      // Information about which Solution was selected
+      solutionId: latestSolution._id,
+      testName: latestSolution.testName,
+      stream: latestSolution.stream,
+      questionType: latestSolution.questionType,
+      date: latestSolution.date,
+
+      // Pagination
       total,
-      // page,
-      // totalPages: Math.ceil(total/limit),
-      data: solutionBankEntries.sort(
-        (a, b) => a.questionNumber - b.questionNumber,
-      ),
+      page: currentPage,
+      limit: pageLimit,
+      totalPages,
+
+      data: solutionBankEntries,
     });
   } catch (err) {
     console.error("Error in getSolutionBank:", err);
-    res.status(500).json({
+
+    return res.status(500).json({
       status: "error",
       message: err.message,
     });
@@ -312,58 +425,79 @@ exports.updateSolutionBankById = async function (req, res) {
 };
 
 //controller for bulk updates
+// Controller for bulk updates
 exports.updateSolutionsInBulk = async function (req, res) {
   try {
-    const { solutionId, solutionBank, studentReports } = req.body;
+    const { solutionIds, solutionBank, studentReports } = req.body;
 
-    // Validate solutionId
-    if (!solutionId || !mongoose.Types.ObjectId.isValid(solutionId)) {
+    // Validate solutionIds
+    if (!Array.isArray(solutionIds) || solutionIds.length === 0) {
       return res.status(400).json({
         status: "error",
-        message: "Valid test ID is required",
+        message: "At least one valid solution ID is required",
+      });
+    }
+
+    // Validate every solution ID
+    const invalidIds = solutionIds.filter(
+      (id) => !mongoose.Types.ObjectId.isValid(id),
+    );
+
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "One or more solution IDs are invalid",
+        invalidIds,
       });
     }
 
     // Validate solutionBank
-    if (!solutionBank || !Array.isArray(solutionBank)) {
+    if (!Array.isArray(solutionBank) || solutionBank.length === 0) {
       return res.status(400).json({
         status: "error",
         message: "Solutions data must be an array",
       });
     }
 
-    // Prepare bulk operations
+    /*
+     * Prepare bulk operations.
+     *
+     * Each question update is applied to ALL SolutionBank
+     * documents belonging to the supplied solution IDs.
+     */
     const updateOperations = solutionBank.map((entry) => ({
-      updateOne: {
+      updateMany: {
         filter: {
-          solutionRef: solutionId,
+          solutionRef: {
+            $in: solutionIds,
+          },
           questionNumber: entry.questionNumber,
         },
+
         update: {
           $set: {
             questionText: entry.questionText || "",
-
             questionImages: entry.questionImages || [],
-
             correctOptions: entry.correctOptions || [],
-
             correctSolution: entry.correctSolution || "",
-
             isGrace: entry.isGrace || false,
           },
         },
       },
     }));
 
-    // Execute bulk write
+    // Execute bulk update
     const solutionResult = await SolutionBank.bulkWrite(updateOperations);
 
     // Update student reports if provided
     let reportResult = {};
+
     if (studentReports && Array.isArray(studentReports)) {
       const reportUpdates = studentReports.map((report) => ({
         updateOne: {
-          filter: { _id: report._id },
+          filter: {
+            _id: report._id,
+          },
           update: {
             $set: {
               correctAnswers: report.correctAnswers,
@@ -383,17 +517,23 @@ exports.updateSolutionsInBulk = async function (req, res) {
       reportResult = await StudentReport.bulkWrite(reportUpdates);
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
-      modifiedSolutions: solutionResult.modifiedCount,
+
+      matchedSolutions: solutionResult.matchedCount || 0,
+
+      modifiedSolutions: solutionResult.modifiedCount || 0,
+
       modifiedReports: reportResult.modifiedCount || 0,
-      message: `Updated ${solutionResult.modifiedCount} solutions and ${
-        reportResult.modifiedCount || 0
-      } reports`,
+
+      message: `Updated ${
+        solutionResult.modifiedCount || 0
+      } SolutionBank entries and ${reportResult.modifiedCount || 0} reports`,
     });
   } catch (err) {
     console.error("Bulk update error:", err);
-    res.status(400).json({
+
+    return res.status(400).json({
       status: "error",
       message: err.message || "Failed to update solutions",
     });
@@ -403,22 +543,10 @@ exports.updateSolutionsInBulk = async function (req, res) {
 // Create Duplicate Solution from Existing Test
 exports.createDuplicateSolution = async function (req, res) {
   try {
-    const {
-      sourceSolutionId,
-      stream,
-      questionType,
-      testName,
-      date,
-    } = req.body;
+    const { sourceSolutionId, stream, questionType, testName, date } = req.body;
 
     // Validate required fields
-    if (
-      !sourceSolutionId ||
-      !stream ||
-      !questionType ||
-      !testName ||
-      !date
-    ) {
+    if (!sourceSolutionId || !stream || !questionType || !testName || !date) {
       return res.status(400).json({
         status: "error",
         message: "All fields are required.",

@@ -4,29 +4,33 @@ const router = express.Router();
 
 // Solution routes
 router.post("/api/createsolution", solutionController.createSolution);
+router.get(
+  "/api/getsolutiontestnames",
+  solutionController.getSolutionTestNames,
+);
 router.get("/api/getsolutionbank", solutionController.getSolutionBank);
 router.put(
   "/api/updatesolution/:solutionId",
-  solutionController.updateSolutionById
+  solutionController.updateSolutionById,
 );
 router.delete(
   "/api/deletesolution/:solutionId",
-  solutionController.deleteSolutionById
+  solutionController.deleteSolutionById,
 );
 
 // SolutionBank routes
 router.put(
   "/api/updatesolutionbank/:entryId",
-  solutionController.updateSolutionBankById
+  solutionController.updateSolutionBankById,
 );
 router.put(
   "/api/updatesolutionsinbulk",
-  solutionController.updateSolutionsInBulk
+  solutionController.updateSolutionsInBulk,
 );
 
 router.post(
   "/api/createduplicatesolution",
-  solutionController.createDuplicateSolution
+  solutionController.createDuplicateSolution,
 );
 // router.delete(
 //   "/api/deletesolutionbank/:entryId",
