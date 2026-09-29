@@ -807,7 +807,7 @@ exports.getStudentTestReview = async (req, res) => {
 
 exports.checkDetailedReportExists = async (req, res) => {
   try {
-    const { testName } = req.query;
+    const { testName, stream } = req.query;
 
     if (!testName) {
       return res.status(400).json({
@@ -816,14 +816,71 @@ exports.checkDetailedReportExists = async (req, res) => {
       });
     }
 
-    const exists = await DetailedReport.exists({ testName });
+    // ---------------------------------------------
+    // Find all submitted DetailedReports for test
+    // ---------------------------------------------
+
+    const filter = {
+      testName,
+    };
+
+    if (stream) {
+      filter.stream = stream;
+    }
+
+    const reports = await DetailedReport.find(filter)
+      .select("testName campus section stream")
+      .lean();
+
+    // ---------------------------------------------
+    // Exact submitted combinations
+    //
+    // testName + campus + section
+    // ---------------------------------------------
+
+    const submittedCombinations = reports.map((report) => ({
+      testName: report.testName,
+      campus: report.campus,
+      section: report.section,
+      stream: report.stream,
+    }));
+
+    // ---------------------------------------------
+    // Unique submitted campuses
+    // ---------------------------------------------
+
+    const submittedCampuses = [
+      ...new Set(reports.map((report) => report.campus).filter(Boolean)),
+    ];
+
+    // ---------------------------------------------
+    // Unique submitted sections
+    // ---------------------------------------------
+
+    const submittedSections = [
+      ...new Set(reports.map((report) => report.section).filter(Boolean)),
+    ];
 
     return res.status(200).json({
       status: "success",
-      submitted: !!exists,
+
+      // Backward-compatible field
+      submitted: reports.length > 0,
+
+      // Number of reports
+      totalReports: reports.length,
+
+      // Campus names which already have reports
+      submittedCampuses,
+
+      // Sections which already have reports
+      submittedSections,
+
+      // Exact test + campus + section combinations
+      submittedCombinations,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error checking detailed report status:", err);
 
     return res.status(500).json({
       status: "error",
