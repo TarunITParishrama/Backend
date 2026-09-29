@@ -256,6 +256,110 @@ exports.getSolutionBank = async function (req, res) {
   }
 };
 
+// Get ALL SolutionBank entries for the latest matching Solution
+// Used for reports, Correct/Wrong analysis, PDF generation, etc.
+exports.getAllSolutionBank = async function (req, res) {
+  try {
+    const {
+      stream,
+      questionType,
+      testName,
+      date,
+    } = req.query;
+
+    // --------------------------------------------------
+    // Build filters
+    // --------------------------------------------------
+
+    const filter = {};
+
+    if (stream) {
+      filter.stream = stream;
+    }
+
+    if (questionType) {
+      filter.questionType = questionType;
+    }
+
+    if (testName) {
+      filter.testName = testName;
+    }
+
+    if (date) {
+      filter.date = new Date(date);
+    }
+
+    // --------------------------------------------------
+    // Find the latest matching Solution
+    // --------------------------------------------------
+
+    const solutions = await Solution.find(filter)
+      .sort({ updatedAt: -1 })
+      .limit(1);
+
+    if (solutions.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "No solutions found with these filters",
+      });
+    }
+
+    const latestSolution = solutions[0];
+
+    // --------------------------------------------------
+    // Get ALL SolutionBank entries
+    //
+    // IMPORTANT:
+    // No skip()
+    // No limit()
+    // --------------------------------------------------
+
+    const solutionBankEntries = await SolutionBank.find({
+      solutionRef: latestSolution._id,
+    })
+      .populate("solutionRef")
+      .select(`
+        solutionRef
+        questionNumber
+        questionText
+        questionImages
+        correctOptions
+        correctSolution
+        isGrace
+        date
+      `)
+      .sort({ questionNumber: 1 });
+
+    // --------------------------------------------------
+    // Return complete solution bank
+    // --------------------------------------------------
+
+    return res.status(200).json({
+      status: "success",
+
+      // Information about selected Solution
+      solutionId: latestSolution._id,
+      testName: latestSolution.testName,
+      stream: latestSolution.stream,
+      questionType: latestSolution.questionType,
+      date: latestSolution.date,
+
+      // Total number of questions
+      total: solutionBankEntries.length,
+
+      // ALL questions
+      data: solutionBankEntries,
+    });
+  } catch (err) {
+    console.error("Error in getAllSolutionBank:", err);
+
+    return res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+};
+
 // Update Solution
 // Update Solution (and sync SolutionBank date)
 exports.updateSolutionById = async function (req, res) {

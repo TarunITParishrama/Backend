@@ -9,6 +9,7 @@ router.get(
   solutionController.getSolutionTestNames,
 );
 router.get("/api/getsolutionbank", solutionController.getSolutionBank);
+router.get("/api/getallsolutionbank", solutionController.getAllSolutionBank);
 router.put(
   "/api/updatesolution/:solutionId",
   solutionController.updateSolutionById,
