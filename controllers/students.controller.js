@@ -135,11 +135,11 @@ exports.bulkCreateStudents = async (req, res) => {
 
     // Log results for debugging
     console.log(
-      `Bulk create results - Success: ${successCount}, Failed: ${failedStudents.length}`
+      `Bulk create results - Success: ${successCount}, Failed: ${failedStudents.length}`,
     );
     console.log(
       "Created students:",
-      createdStudents.map((s) => s.regNumber)
+      createdStudents.map((s) => s.regNumber),
     );
     console.log("Failed students:", failedStudents);
 
@@ -242,7 +242,7 @@ exports.getAllStudents = async function (req, res) {
         }
 
         return studentObj;
-      })
+      }),
     );
 
     res.status(200).json({
@@ -321,11 +321,7 @@ exports.getStudentByRegNumber = async (req, res) => {
     }
 
     // 3. Save into Redis
-    await cache.set(
-      cacheKey,
-      studentObj,
-      STUDENT_PROFILE_TTL
-    );
+    await cache.set(cacheKey, studentObj, STUDENT_PROFILE_TTL);
 
     console.log(`✅ Cached -> ${cacheKey}`);
 
@@ -334,13 +330,33 @@ exports.getStudentByRegNumber = async (req, res) => {
       status: "success",
       data: studentObj,
     });
-
   } catch (error) {
     console.error("Error fetching student:", error);
 
     return res.status(400).json({
       status: "error",
       message: error.message,
+    });
+  }
+};
+
+exports.getParentStudentProfile = async (req, res) => {
+  try {
+    const student = await Student.findById(req.parent.id).populate("campus");
+
+    if (!student) {
+      return res.status(404).json({
+        status: "error",
+        message: "Student not found",
+      });
+    }
+
+    // Reuse the same profile formatting and image URL logic
+    // from getStudentByRegNumber.
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Unable to fetch student profile",
     });
   }
 };
@@ -461,7 +477,7 @@ exports.deleteStudentImage = async (req, res) => {
     await Student.findOneAndUpdate(
       { regNumber },
       { $unset: { studentImageURL: 1 } },
-      { new: true }
+      { new: true },
     );
 
     res.status(200).json({
@@ -648,11 +664,11 @@ exports.downloadTemplate = async (req, res) => {
     // Set response headers
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=student_template.xlsx"
+      "attachment; filename=student_template.xlsx",
     );
 
     // Send the workbook
@@ -711,7 +727,7 @@ exports.getDeletedStudents = async (req, res) => {
     const [data, total] = await Promise.all([
       DeletedStudent.find(
         {},
-        "regNumber studentName campus studentImageURL deletedAt"
+        "regNumber studentName campus studentImageURL deletedAt",
       ) // projection
         .populate("campus", "name")
         .sort({ deletedAt: -1 })
@@ -720,15 +736,13 @@ exports.getDeletedStudents = async (req, res) => {
       DeletedStudent.countDocuments(),
     ]);
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        total,
-        page,
-        totalPages: Math.ceil(total / limit),
-        data,
-      });
+    res.status(200).json({
+      status: "success",
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data,
+    });
   } catch (err) {
     res.status(400).json({ status: "error", message: err.message });
   }
@@ -736,19 +750,27 @@ exports.getDeletedStudents = async (req, res) => {
 
 exports.getDeletedStudentById = async (req, res) => {
   try {
-    const doc = await DeletedStudent.findById(req.params.id)
-      .populate('campus', 'name type location');
-    if (!doc) return res.status(404).json({ status: 'error', message: 'Archived record not found' });
-    return res.status(200).json({ status: 'success', data: doc }); // doc now has deletedByUsername
+    const doc = await DeletedStudent.findById(req.params.id).populate(
+      "campus",
+      "name type location",
+    );
+    if (!doc)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Archived record not found" });
+    return res.status(200).json({ status: "success", data: doc }); // doc now has deletedByUsername
   } catch (err) {
-    return res.status(400).json({ status: 'error', message: err.message });
+    return res.status(400).json({ status: "error", message: err.message });
   }
 };
 
 exports.getByReg = async (req, res) => {
   try {
     const s = await Student.findOne({ regNumber: req.params.regNumber });
-    if (!s) return res.status(404).json({ status: "error", message: "Student not found" });
+    if (!s)
+      return res
+        .status(404)
+        .json({ status: "error", message: "Student not found" });
     return res.status(200).json({ status: "success", data: s });
   } catch (e) {
     return res.status(500).json({ status: "error", message: e.message });

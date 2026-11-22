@@ -8,7 +8,6 @@ const requestLogger = require("./middleware/requestLogger");
 const app = express();
 const port = process.env.PORT || 5000;
 
-
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -85,7 +84,7 @@ app.use("/", DetailedReportRoute);
 const FeedbackRoute = require("./routes/feedback.route");
 app.use("/", FeedbackRoute);
 
-const ProfileRoute = require("./routes/profile.route")
+const ProfileRoute = require("./routes/profile.route");
 app.use("/", ProfileRoute);
 
 const ParentFeedbackRoute = require("./routes/parentfeedback.route");
@@ -93,6 +92,11 @@ app.use("/", ParentFeedbackRoute);
 
 const hostelFoodRoutes = require("./routes/hostelfood.route");
 app.use(hostelFoodRoutes);
+const AIChatRoute = require("./routes/aiChat.route");
+app.use(AIChatRoute);
+
+const ParentAppReviewRoute = require("./routes/parentAppReview.route");
+app.use("/",ParentAppReviewRoute);
 
 // app.listen(port, () => {
 //   console.log(`Server is running on http://localhost:${port}`);
